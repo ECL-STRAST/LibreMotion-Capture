@@ -7,10 +7,10 @@
 // Uploader that calls the Java helper AyudanteHttp.makeRequest via JNI.
 // This class does NOT perform HTTP by itself; it just bridges between
 // C++ and Java, passing method, URL, body and headers to Java.
-class AndroidUploader {
+class JSONUploader {
 public:
-    AndroidUploader() = default;
-    ~AndroidUploader() = default;
+    JSONUploader() = default;
+    ~JSONUploader() = default;
 
     // Stores the Java VM pointer and the global Activity reference.
     // required later to obtain a JNIEnv* and to get the Activity class loader used to load the AyudanteHttp class.

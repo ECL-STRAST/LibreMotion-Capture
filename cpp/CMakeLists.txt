@@ -23,7 +23,7 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/thirdparty/ezc3d)
 add_library(telemetria SHARED
         TelemetryAPI.cpp
         TelemetryManager.cpp
-        AndroidUploader.cpp
+        JSONUploader.cpp
         configReader.cpp
         C3DRecorder.cpp
 )

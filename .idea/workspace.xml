@@ -5,44 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="49f7d838-f67d-401b-b791-938c2ce0dffb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Unity_Implementation/Plugins/Android/AARTelemetria-debug.aar" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unity_Implementation/Plugins/telemetria/TelemetriaAPI.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unity_Implementation/Scripts/TelemetriaBootstrap.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Resources/Icon128.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Source/Telemetry/Private/Telemetry.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Source/Telemetry/Private/TelemetryComponent.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Source/Telemetry/Public/TelemetryComponent.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Source/Telemetry/Telemetry.Build.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Source/Telemetry/Telemetry_APL.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Source/ThirdParty/AARTelemetria.aar" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Source/ThirdParty/Android/arm64-v8a/libtelemetria.so" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Unreal_Implementation/Plugins/Telemetry/Telemetry.uplugin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/checksums/checksums.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/executionHistory/executionHistory.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/executionHistory/executionHistory.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/fileHashes/fileHashes.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/fileHashes/fileHashes.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/8.7/fileHashes/resourceHashesCache.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/9.1.0/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/9.1.0/executionHistory/executionHistory.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/9.1.0/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/9.1.0/fileHashes/fileHashes.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/9.1.0/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/9.1.0/fileHashes/fileHashes.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/buildOutputCleanup/cache.properties" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/buildOutputCleanup/cache.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/buildOutputCleanup/outputFiles.bin" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/buildOutputCleanup/outputFiles.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/.gradle/file-system.probe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/aar_main_jar/debug/syncDebugLibJars/classes.jar" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/aar_main_jar/debug/syncDebugLibJars/classes.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/io/github/migueldulu/telemetria/AyudanteHttp.class" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/io/github/migueldulu/telemetria/AyudanteHttp.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/library_and_local_jars_jni/debug/copyDebugJniLibsProjectAndLocalJars/jni/arm64-v8a/libtelemetria.so" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/library_and_local_jars_jni/debug/copyDebugJniLibsProjectAndLocalJars/jni/arm64-v8a/libtelemetria.so" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/merged_jni_libs/debug/mergeDebugJniLibFolders/out/arm64-v8a/libtelemetria.so" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/merged_jni_libs/debug/mergeDebugJniLibFolders/out/arm64-v8a/libtelemetria.so" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/arm64-v8a/libtelemetria.so" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/arm64-v8a/libtelemetria.so" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/stripped_native_libs/debug/stripDebugDebugSymbols/out/lib/arm64-v8a/libtelemetria.so" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/intermediates/stripped_native_libs/debug/stripDebugDebugSymbols/out/lib/arm64-v8a/libtelemetria.so" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/outputs/aar/AARTelemetria-debug.aar" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/outputs/aar/AARTelemetria-debug.aar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/src/main/jniLibs/arm64-v8a/libtelemetria.so" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/AARTelemetria/src/main/jniLibs/arm64-v8a/libtelemetria.so" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LibreriaTelemetria/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/LibreriaTelemetria/build/reports/problems/problems-report.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Unity_Implementation/README_Unity.md" beforeDir="false" afterPath="$PROJECT_DIR$/Unity_Implementation/README_Unity.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Unreal_Implementation/README_Unreal.md" beforeDir="false" afterPath="$PROJECT_DIR$/Unreal_Implementation/README_Unreal.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cpp/thirdparty/ezc3d" beforeDir="false" afterPath="$PROJECT_DIR$/cpp/thirdparty/ezc3d" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cpp/thirdparty/ezc3d/.github/workflows/publish_matlab_binaries.yml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/cpp/thirdparty/ezc3d/.github/workflows/publish_to_pypi.yml" beforeDir="false" />
@@ -104,11 +67,12 @@
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/miguel/AndroidStudioProjects/AARv2Lector/Unreal_Implementation&quot;
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/miguel/AndroidStudioProjects/AARv2Lector&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\miguel\AndroidStudioProjects\AARv2Lector" />
       <recent name="C:\Users\miguel\AndroidStudioProjects\AARv2Lector\Unreal_Implementation" />
       <recent name="C:\Users\miguel\AndroidStudioProjects\AARv2Lector\Unity_Implementation\Plugins\Android" />
       <recent name="C:\Users\miguel\AndroidStudioProjects\AARv2Lector\Unity_Implementation" />

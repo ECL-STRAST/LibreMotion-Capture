@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-// Configuration used by GestorTelemetria and AndroidUploader
+// Configuration used by GestorTelemetria and JSONUploader
 // This struct is filled partly from the engine (sessionId, deviceInfo)
 // and partly from the JSON file initialConfig.json (endpoint, apiKey,
 // framesPerFile and feature flags).

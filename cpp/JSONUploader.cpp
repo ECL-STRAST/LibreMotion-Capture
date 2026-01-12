@@ -1,4 +1,4 @@
-#include "AndroidUploader.h"
+#include "JSONUploader.h"
 #include <android/log.h>
 
 #define LOG_TAG "telemetria"
@@ -34,30 +34,30 @@ static void logJavaException(JNIEnv* env, const char* where) {
 }
 
 // Store VM and Activity references for later use by JNI calls.
-void AndroidUploader::setJavaContext(JavaVM* vm, jobject activityGlobalRef) {
+void JSONUploader::setJavaContext(JavaVM* vm, jobject activityGlobalRef) {
     vm_ = vm;
     activity_ = activityGlobalRef;
 }
 
 // Initialize uploader with configuration.
 // It just copies cfg into cfg_ and checks that we have both a VM and an Activity
-bool AndroidUploader::initialize(const UploaderConfig& cfg) {
+bool JSONUploader::initialize(const UploaderConfig& cfg) {
     cfg_ = cfg;
     if (!vm_ || !activity_) {
-        LOGE("AndroidUploader initialize without VM or Activity");
+        LOGE("JSONUploader initialize without VM or Activity");
         return false;
     }
     return true;
 }
 
 // Currently placeholder; kept for symmetry with other components lifecycle.
-void AndroidUploader::shutdown() {
+void JSONUploader::shutdown() {
     // Noop for now
 }
 
 // Upload a JSON load to the configured endpoint.
 // Builds headers (Content-Type, apikey, Authorization) and delegates the actual HTTP call to callJavaMakeRequest using POST.
-bool AndroidUploader::uploadJson(const std::string& jsonBody) {
+bool JSONUploader::uploadJson(const std::string& jsonBody) {
     // Must contain valid endpoint URL and API key
     if (cfg_.endpointUrl.empty() || cfg_.apiKey.empty()) {
         LOGE("Missing supabase config");
@@ -82,7 +82,7 @@ bool AndroidUploader::uploadJson(const std::string& jsonBody) {
 
 // Core JNI bridge that calls the Java static method:
 //   byte[] AyudanteHttp.makeRequest(String method, String url, byte[] body, Map<String,String> headers)
-bool AndroidUploader::callJavaMakeRequest(const std::string& method,
+bool JSONUploader::callJavaMakeRequest(const std::string& method,
                                           const std::string& url,
                                           const std::string& body,
                                           const std::vector<std::pair<std::string,std::string>>& headers) {
@@ -157,7 +157,7 @@ bool AndroidUploader::callJavaMakeRequest(const std::string& method,
     }
 
     jbyteArray jResp = (jbyteArray)env->CallStaticObjectMethod(helperCls, makeReq, jMethod, jUrl, jBody, jMap);
-    logJavaException(env, "AndroidUploader.callJavaMakeRequest");
+    logJavaException(env, "JSONUploader.callJavaMakeRequest");
 
     //clean any local ref created
     if (jBody) env->DeleteLocalRef(jBody);

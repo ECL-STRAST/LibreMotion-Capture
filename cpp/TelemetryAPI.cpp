@@ -1,6 +1,6 @@
 #include "TelemetryAPI.h"
 #include "TelemetryManager.h"
-#include "AndroidUploader.h"
+#include "JSONUploader.h"
 #include <android/log.h>
 #include <mutex>
 #include "configReader.h"
@@ -17,7 +17,7 @@ static std::mutex g_mutex;
 
 // singletons for the internal components managed through the api
 static GestorTelemetria g_gestor;
-static AndroidUploader g_uploader;
+static JSONUploader g_uploader;
 static C3DRecorder     g_c3d;
 //Cached feautres flags to be exposed
 static unsigned g_featureFlags = 0;

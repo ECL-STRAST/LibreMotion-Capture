@@ -1,48 +1,48 @@
 # LibreMotion_Capture
 
-LibreMotion_Capture es una libreria nativa desarrollada en C++ para Android cuyo objetivo es capturar datos de movimiento de dispositivos de Realidad Virtual, incluyendo HMD, controladores y seguimiento de manos, desde aplicaciones desarrolladas en Unity y Unreal Engine.
+LibreMotion_Capture is a native C++ library developed for Android whose purpose is to capture motion data from Virtual Reality devices, including the HMD, controllers, and hand tracking, from applications developed in Unity and Unreal Engine.
 
-La libreria forma parte del ecosistema LibreMotion y esta disenada para facilitar la adquisicion, normalizacion y persistencia de datos de movimiento con fines de analisis biomecanico, investigacion o telemetria.
-
----
-
-## Contenido del repositorio
-
-Este repositorio incluye:
-
-- Nucleo nativo en C++ compilable como libreria compartida (.so) en la carpeta /cpp
-- Wrapper Android empaquetado como AAR para su uso en Unity en /LibreriaTelemetria
-- Scripts para el uso de la libreria en Unity
-- Plug in para el uso de la libreria en Unreal Engine
-- Ejemplo de JSON de configuración inicial `initialConfig.json`
-- Scripts y configuracion necesarios para la compilacion
+The library is part of the LibreMotion ecosystem and is designed to facilitate the acquisition, normalization, and persistence of motion data for biomechanical analysis, research, or telemetry purposes.
 
 ---
 
-## Requisitos
+## Repository contents
 
-- Android NDK
-- CMake
-- Ninja
-- Gradle
+This repository includes:
 
-Nota: el flujo de compilacion actual esta orientado a Android arm64-v8a con API 24.
+- Native C++ core, compilable as a shared library (.so), located in the /cpp folder  
+- Android wrapper packaged as an AAR for use in Unity, located in /LibreriaTelemetria  
+- Scripts for using the library in Unity  
+- Plugin for using the library in Unreal Engine  
+- Example of the initial configuration JSON file `initialConfig.json`  
+- Scripts and configuration required for compilation  
 
 ---
 
-## Compilacion de la libreria nativa (.so)
+## Requirements
 
-### 1. Configurar la ruta del NDK
+- Android NDK  
+- CMake  
+- Ninja  
+- Gradle  
 
-En este ejemplo se utiliza el NDK incluido con Unity. Ajusta la ruta si tu version de Unity es distinta.
+Note: the current build workflow targets Android arm64-v8a with API level 24.
+
+---
+
+## Native library (.so) compilation
+
+### 1. Configure the NDK path
+
+In this example, the NDK bundled with Unity is used. Adjust the path if your Unity version is different.
 
 ```powershell
 $NDK = "C:/Program Files/Unity/Hub/Editor/6000.2.5f1/Editor/Data/PlaybackEngines/AndroidPlayer/NDK"
 ```
 
-### 2. Generar los archivos de build con CMake
+### 2. Generate build files with CMake
 
-Desde la carpeta que contiene los archivos fuente (.cpp):
+From the folder containing the source files (.cpp):
 
 ```powershell
 cmake -S . -B build-arm64 -G "Ninja" ^
@@ -54,21 +54,21 @@ cmake -S . -B build-arm64 -G "Ninja" ^
   -D ANDROID_ARM_NEON=ON
 ```
 
-### 3. Compilar la libreria
+### 3. Build the library
 
 ```powershell
 cmake --build build-arm64 --config Release
 ```
 
-### 4. Resultado de la compilacion
+### 4. Build output
 
-Se generara el archivo:
+The following file will be generated:
 
 ```
 build-arm64/libreriaTelemetria.so
 ```
 
-Este archivo debe copiarse manualmente a la siguiente ruta para generar el AAR:
+This file must be manually copied to the following path in order to generate the AAR:
 
 ```
 LibreriaTelemetria/AARTelemetria/src/main/jniLibs/arm64-v8a/
@@ -76,43 +76,43 @@ LibreriaTelemetria/AARTelemetria/src/main/jniLibs/arm64-v8a/
 
 ---
 
-## Generacion del AAR (Android Library)
+## AAR generation (Android Library)
 
-### 1. Archivos necesarios
+### 1. Required files
 
-Para generar correctamente el AAR, deben existir los siguientes archivos y rutas:
+To correctly generate the AAR, the following files and paths must exist:
 
-En `AARTelemetria/src/`:
-- build.gradle
-- AndroidManifest.xml
+In `AARTelemetria/src/`:
+- build.gradle  
+- AndroidManifest.xml  
 
-En `AARTelemetria/src/main/`:
-- consumer-rules.pro
+In `AARTelemetria/src/main/`:
+- consumer-rules.pro  
 
-En `AARTelemetria/src/main/java/io/github/migueldulu/telemetria/`:
-- AyudanteHttp.java
+In `AARTelemetria/src/main/java/io/github/migueldulu/telemetria/`:
+- AyudanteHttp.java  
 
-En la raiz del proyecto (`LibreriaTelemetria/`):
-- settings.gradle
-- build.gradle (vacio, solo necesario si Gradle produce errores)
+In the project root (`LibreriaTelemetria/`):
+- settings.gradle  
+- build.gradle (empty, only required if Gradle produces errors)  
 
-### 2. Generar el wrapper de Gradle (si no existe)
+### 2. Generate the Gradle wrapper (if it does not exist)
 
-Desde la carpeta `LibreriaTelemetria`:
+From the `LibreriaTelemetria` folder:
 
 ```powershell
 gradle wrapper --gradle-version 8.7 --distribution-type all
 ```
 
-### 3. Compilar el AAR
+### 3. Build the AAR
 
 ```powershell
 .\gradlew.bat :AARTelemetria:assembleDebug
 ```
 
-### 4. Resultado
+### 4. Output
 
-El archivo AAR se generara en:
+The AAR file will be generated in:
 
 ```
 AARTelemetria/build/outputs/aar/
@@ -120,7 +120,7 @@ AARTelemetria/build/outputs/aar/
 
 ---
 
-## Licencia
+## License
 
-Este proyecto forma parte del ecosistema LibreMotion y se distribuye como software open-source.
-La licencia definitiva se anadira en futuras versiones.
+This project is part of the LibreMotion ecosystem and is distributed as open-source software.  
+The final license will be added in future versions.

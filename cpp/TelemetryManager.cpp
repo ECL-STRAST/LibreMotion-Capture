@@ -1,5 +1,5 @@
 #include "TelemetryManager.h"
-#include "AndroidUploader.h"
+#include "JSONUploader.h"
 #include <android/log.h>
 #include <sstream>
 #include "configReader.h"
@@ -33,7 +33,7 @@ GestorTelemetria::~GestorTelemetria() {
     }
 }
 
-bool GestorTelemetria::initialize(const UploaderConfig& cfg, AndroidUploader* uploader) {
+bool GestorTelemetria::initialize(const UploaderConfig& cfg, JSONUploader* uploader) {
         {
             // Initialize front buffer and configuration used by the producer.
             std::lock_guard <std::mutex> lock(mtx_);

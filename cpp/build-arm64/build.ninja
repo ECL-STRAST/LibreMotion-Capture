@@ -71,10 +71,10 @@ build CMakeFiles/telemetria.dir/TelemetryManager.cpp.o: CXX_COMPILER__telemetria
   TARGET_COMPILE_PDB = CMakeFiles\telemetria.dir\
   TARGET_PDB = libtelemetria.pdb
 
-build CMakeFiles/telemetria.dir/AndroidUploader.cpp.o: CXX_COMPILER__telemetria_unscanned_Release C$:/Users/miguel/AndroidStudioProjects/AARv2Lector/cpp/AndroidUploader.cpp || cmake_object_order_depends_target_telemetria
+build CMakeFiles/telemetria.dir/JSONUploader.cpp.o: CXX_COMPILER__telemetria_unscanned_Release C$:/Users/miguel/AndroidStudioProjects/AARv2Lector/cpp/JSONUploader.cpp || cmake_object_order_depends_target_telemetria
   CONFIG = Release
   DEFINES = -DANDROID -Dtelemetria_EXPORTS
-  DEP_FILE = CMakeFiles\telemetria.dir\AndroidUploader.cpp.o.d
+  DEP_FILE = CMakeFiles\telemetria.dir\JSONUploader.cpp.o.d
   FLAGS = -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O3 -DNDEBUG  -std=gnu++17 -fPIC -fno-exceptions -fno-rtti
   INCLUDES = -IC:/Users/miguel/AndroidStudioProjects/AARv2Lector/cpp/. -IC:/Users/miguel/AndroidStudioProjects/AARv2Lector/cpp/thirdparty/ezc3d/include -IC:/Users/miguel/AndroidStudioProjects/AARv2Lector/cpp/build-arm64/thirdparty/ezc3d/include -IC:/Users/miguel/AndroidStudioProjects/AARv2Lector/cpp/thirdparty/ezc3d/include/ezc3d -IC:/Users/miguel/AndroidStudioProjects/AARv2Lector/cpp/build-arm64/thirdparty/ezc3d/include/ezc3d
   OBJECT_DIR = CMakeFiles\telemetria.dir
@@ -112,7 +112,7 @@ build CMakeFiles/telemetria.dir/C3DRecorder.cpp.o: CXX_COMPILER__telemetria_unsc
 #############################################
 # Link the shared library libtelemetria.so
 
-build libtelemetria.so: CXX_SHARED_LIBRARY_LINKER__telemetria_Release CMakeFiles/telemetria.dir/TelemetryAPI.cpp.o CMakeFiles/telemetria.dir/TelemetryManager.cpp.o CMakeFiles/telemetria.dir/AndroidUploader.cpp.o CMakeFiles/telemetria.dir/configReader.cpp.o CMakeFiles/telemetria.dir/C3DRecorder.cpp.o | thirdparty/ezc3d/libezc3d.a || thirdparty/ezc3d/libezc3d.a
+build libtelemetria.so: CXX_SHARED_LIBRARY_LINKER__telemetria_Release CMakeFiles/telemetria.dir/TelemetryAPI.cpp.o CMakeFiles/telemetria.dir/TelemetryManager.cpp.o CMakeFiles/telemetria.dir/JSONUploader.cpp.o CMakeFiles/telemetria.dir/configReader.cpp.o CMakeFiles/telemetria.dir/C3DRecorder.cpp.o | thirdparty/ezc3d/libezc3d.a || thirdparty/ezc3d/libezc3d.a
   CONFIG = Release
   DEP_FILE = CMakeFiles\telemetria.dir\link.d
   LANGUAGE_COMPILE_FLAGS = -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O3 -DNDEBUG
