@@ -1,6 +1,6 @@
-# LibreMotion_Capture
+# LibreMotion-Capture
 
-LibreMotion_Capture is a native C++ library developed for Android whose purpose is to capture motion data from Virtual Reality devices, including the HMD, controllers, and hand tracking, from applications developed in Unity and Unreal Engine.
+LibreMotion-Capture is a native C++ library developed for Android whose purpose is to capture motion data from Virtual Reality devices, including the HMD, controllers, and hand tracking, from applications developed in Unity and Unreal Engine.
 
 The library is part of the LibreMotion ecosystem and is designed to facilitate the acquisition, normalization, and persistence of motion data for biomechanical analysis, research, or telemetry purposes.
 
@@ -117,10 +117,3 @@ The AAR file will be generated in:
 ```
 AARTelemetria/build/outputs/aar/
 ```
-
----
-
-## License
-
-This project is part of the LibreMotion ecosystem and is distributed as open-source software.  
-The final license will be added in future versions.
