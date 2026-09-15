@@ -10,4 +10,6 @@ namespace Log {
     void err (const char* fmt, ...);
 }
 bool readFileToString(const std::string& path, std::string& outText);
+std::string joinPath(const std::string& a, const std::string& b);
+std::string sanitizeSessionId(const std::string& raw);
 } // namespace lmc
