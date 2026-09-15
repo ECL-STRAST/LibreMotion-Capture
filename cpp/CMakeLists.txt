@@ -80,7 +80,8 @@ if(TELEMETRIA_BUILD_TESTS AND NOT ANDROID)
         tests/test_manager.cpp
         tests/test_c3d_recorder.cpp
         tests/test_http_headers.cpp
-        platform/windows/WinPathResolver.cpp)
+        platform/windows/WinPathResolver.cpp
+        platform/windows/WinHttpTransport.cpp)
     target_link_libraries(telemetria_tests PRIVATE telemetria_core gtest gtest_main)
     target_include_directories(telemetria_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/core)
