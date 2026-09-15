@@ -69,7 +69,7 @@ bool WinHttpTransport::postJson(const std::string& url,
     }
 
     // 4) POST request; TLS when the URL scheme was https.
-    const wchar_t* path = (uc.nUrlPathLength == 0) ? L"/" : uc.lpszUrlPath;
+    const wchar_t* path = (uc.dwUrlPathLength == 0) ? L"/" : uc.lpszUrlPath;
     HINTERNET hRequest = WinHttpOpenRequest(
         hConnect, L"POST", path, nullptr,
         WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
