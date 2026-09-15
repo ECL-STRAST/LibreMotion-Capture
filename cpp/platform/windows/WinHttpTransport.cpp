@@ -61,7 +61,7 @@ bool WinHttpTransport::postJson(const std::string& url,
     WinHttpSetTimeouts(hSession, 15000, 15000, 30000, 30000);
 
     // 3) Connect.
-    HINTERNET hConnect = WinHttpConnect(hSession, uc.lpszHostName, uc.nPort, nullptr);
+    HINTERNET hConnect = WinHttpConnect(hSession, uc.lpszHostName, uc.nPort, 0);
     if (!hConnect) {
         Log::err("WinHttpConnect failed err=%lu", GetLastError());
         WinHttpCloseHandle(hSession);
