@@ -98,7 +98,7 @@ bool WinHttpTransport::postJson(const std::string& url,
     // 6) Send the body and wait for the response.
     if (headersOk) {
         if (WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-                               body.data(), (DWORD)body.size(), (DWORD)body.size(), 0) &&
+                               const_cast<char*>(body.data()), (DWORD)body.size(), (DWORD)body.size(), 0) &&
             WinHttpReceiveResponse(hRequest, nullptr)) {
             // 7) Status code, true only on 2xx.
             DWORD statusCode = 0;
