@@ -40,7 +40,17 @@ bool getAppFilesDir(std::string& outDir) {
 bool AndroidPathResolver::configFilePath(std::string& out) {
     std::string dir;
     if (!getAppFilesDir(dir)) return false;
-    out = dir + "/initialConfig.json";
+    const std::string primary = dir + "/initialConfig.json"; // /sdcard/...
+    if (fileExists(primary)) { out = primary; return true; }
+    // R7: primary missing -> fall back to the /storage/emulated/0 variant so that
+    // readFileToString on the returned path succeeds wherever the retired
+    // configReader read-time retry (/sdcard -> /storage/emulated/0) succeeded.
+    const std::string sdcard = "/sdcard/";
+    if (dir.rfind(sdcard, 0) == 0) {
+        out = std::string("/storage/emulated/0/") + dir.substr(sdcard.size()) + "/initialConfig.json";
+        return true;
+    }
+    out = primary;
     return true;
 }
 

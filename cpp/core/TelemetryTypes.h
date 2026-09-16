@@ -26,4 +26,5 @@ struct UploaderConfig {
 struct TelemetryConfigPlain {
     const char* sessionId;     // UTF-8
     const char* deviceInfo;    // UTF-8
+    const char* baseDir;       // UTF-8; optional. Base directory for config + C3D output (Windows/engine-provided). May be null.
 };

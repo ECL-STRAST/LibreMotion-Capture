@@ -1,7 +1,12 @@
 #pragma once
-#include <jni.h>
 #include "VRTypes.h"
 #include "TelemetryTypes.h"
+
+// JNI types are an Android-only concern: <jni.h> and the java-context entry
+// point live exclusively on Android. The rest of the C ABI is portable.
+#ifdef __ANDROID__
+#include <jni.h>
+#endif
 
 // Export macro para Android (makes the function visible oustide de .so)
 #ifndef TELEMETRIA_API
@@ -12,9 +17,11 @@
 extern "C" {
 #endif
 
-// This must be called before telemetry_initialize so that the uploader
+#ifdef __ANDROID__
+// Android-only: must be called before telemetry_initialize so that the transport
 // can dynamically load the classes from the AAR.
 TELEMETRIA_API void telemetry_set_java_context(JavaVM* vm, jobject activity);
+#endif
 
 // Initializes the telemetry manager and HTTP uploader.
 // - cfg: basic configuration coming from Unity/Unreal (sessionId, deviceInfo).
@@ -37,7 +44,7 @@ TELEMETRIA_API void telemetry_force_upload();
 // This will:
 //   - finalize the C3D recorder and write the .c3d file if needed;
 //   - flush and stop the JSON uploader worker;
-//   - release the global Java Activity reference.
+//   - detach the platform log sink.
 TELEMETRIA_API void telemetry_shutdown();
 
 // Returns a bitmask of feature flags read from initialConfig.json.

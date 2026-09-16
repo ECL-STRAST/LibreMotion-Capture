@@ -11,6 +11,10 @@ bool readFileToString(const std::string& path, std::string& outText) {
     outText = ss.str();
     return true;
 }
+bool fileExists(const std::string& path) {
+    std::ifstream in(path, std::ios::in | std::ios::binary);
+    return static_cast<bool>(in);
+}
 std::string joinPath(const std::string& a, const std::string& b) {
     if (a.empty()) return b;
     char last = a.back();
