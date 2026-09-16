@@ -40,5 +40,16 @@ public class Telemetry : ModuleRules
                 System.Console.WriteLine("WARNING: libtelemetria.so not found for link-only: " + LibForLink);
             }
         }
+        else if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            // telemetria.dll + telemetria.lib (MSVC-built import lib, NO MinGW
+            // libtelemetria.dll.a) under Source/ThirdParty/Windows/{bin,lib}.
+            // Ver cpp/README-build.md y Unreal_Implementation/README_Unreal_Windows.md
+            string Third = System.IO.Path.Combine(ModuleDirectory, "../ThirdParty/Windows");
+            PublicAdditionalLibraries.Add(System.IO.Path.Combine(Third, "lib/telemetria.lib"));
+            PublicDelayLoadDLLs.Add("telemetria.dll");
+            RuntimeDependencies.Add(System.IO.Path.Combine(Third, "bin/telemetria.dll"));
+            // add `winhttp` is unnecessary: the DLL links it privately.
+        }
     }
 }

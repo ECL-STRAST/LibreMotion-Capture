@@ -83,6 +83,7 @@ private:
     // buffers C que viviran hasta EndPlay
     char* TelemetrySess = nullptr;
     char* TelemetryDev = nullptr;
+    char* TelemetryBaseDir = nullptr;
 
     // Handles de delegados de ciclo de vida
     FDelegateHandle HandleWillEnterBackground;

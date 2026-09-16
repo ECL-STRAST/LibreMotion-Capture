@@ -5,6 +5,7 @@
 #include "GameFramework/InputSettings.h"
 #include "HAL/PlatformProcess.h"
 #include "Misc/DateTime.h"
+#include "Misc/Paths.h"
 #include "Misc/CoreDelegates.h"
 #include "IXRTrackingSystem.h"
 #include "InputCoreTypes.h"
@@ -68,19 +69,25 @@ extern "C" {
         int rightHandJointCount;
     };
 
+    // Debe coincidir exactamente con cpp/core/TelemetryTypes.h:
+    // TelemetryConfigPlain { sessionId, deviceInfo, baseDir }
     struct TelemetryConfigPlain
     {
         const char* sessionId;
         const char* deviceInfo;
+        const char* baseDir;
     };
 
-#if PLATFORM_ANDROID
+#if !PLATFORM_MAC /* both Android and Win64 link telemetria */
     int  telemetry_initialize(const TelemetryConfigPlain* cfg);
-    void telemetry_set_java_context(void* vm, void* activity);
     void telemetry_record_frame(const VRFrameDataPlain* frame);
     void telemetry_force_upload();
     void telemetry_shutdown();
     unsigned telemetry_get_feature_flags();
+#if PLATFORM_ANDROID
+    // Android-only export: no existe en telemetria.dll (Win64)
+    void telemetry_set_java_context(void* vm, void* activity);
+#endif
 #else
     static int  telemetry_initialize(const TelemetryConfigPlain*) { return 0; }
     static void telemetry_record_frame(const VRFrameDataPlain*) {}
@@ -261,10 +268,14 @@ void UTelemetryComponent::BeginPlay()
 
     TelemetrySess = DupAnsi(SessId);
     TelemetryDev = DupAnsi(DevInfo);
+    // baseDir: el nativo busca initialConfig.json aqui y escribe los .c3d (Win64)
+    const FString BaseDir = FPaths::ProjectSavedDir();
+    TelemetryBaseDir = DupAnsi(BaseDir);
 
     TelemetryConfigPlain Cfg{};
     Cfg.sessionId = TelemetrySess;
     Cfg.deviceInfo = TelemetryDev;
+    Cfg.baseDir = TelemetryBaseDir;
 
 #if PLATFORM_ANDROID
     {
@@ -336,6 +347,7 @@ void UTelemetryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
     FMemory::Free(TelemetrySess); TelemetrySess = nullptr;
     FMemory::Free(TelemetryDev);  TelemetryDev = nullptr;
+    FMemory::Free(TelemetryBaseDir); TelemetryBaseDir = nullptr;
 
     Super::EndPlay(EndPlayReason);
 }
@@ -352,6 +364,7 @@ void UTelemetryComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 
     FMemory::Free(TelemetrySess); TelemetrySess = nullptr;
     FMemory::Free(TelemetryDev);  TelemetryDev = nullptr;
+    FMemory::Free(TelemetryBaseDir); TelemetryBaseDir = nullptr;
 
     Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
@@ -832,4 +845,5 @@ void UTelemetryComponent::OnAppWillEnterBackground()
     // these frees were in your file; kept as is
     FMemory::Free(TelemetrySess); TelemetrySess = nullptr;
     FMemory::Free(TelemetryDev);  TelemetryDev = nullptr;
+    FMemory::Free(TelemetryBaseDir); TelemetryBaseDir = nullptr;
 }
