@@ -4,15 +4,14 @@
 #include <mutex>
 #include "TelemetryTypes.h"
 #include "VRTypes.h"
+#include "platform/Interfaces.h"
 #include <deque>
 #include <condition_variable>
 #include <thread>
 
-class JSONUploader;
-
 // Basic manager for buffering VR frames and triggering uploads.
 // It accumulates frames into an in-memory chunk and hands that chunk to a background worker thread
-// that serializes it to JSON and sends it through the other class -> JSONUploader.
+// that serializes it to JSON and sends it through the other class -> IHttpTransport.
 class GestorTelemetria {
 public:
     GestorTelemetria();
@@ -22,9 +21,9 @@ public:
 
     // Initializes the manager with a configuration and an uploader.
     // - cfg: contains endpoint, API key, framesPerFile and feature flags.
-    // - uploader: pointer to an JSONUploader that will perform the HTTP POST.
+    // - transport: pointer to an IHttpTransport that will perform the HTTP POST.
     // This will also start the worker thread that consumes chunks.
-    bool initialize(const UploaderConfig& cfg, JSONUploader* uploader);
+    bool initialize(const UploaderConfig& cfg, lmc::IHttpTransport* transport);
 
     // Records a one VR frame:
     // - The frame is appended to an internal buffer.
@@ -49,8 +48,8 @@ private:
     std::vector<VRFrameDataPlain> buffer_;
     // Copy of the uploader configuration (endpoint, flags, etc.).
     UploaderConfig cfg_;
-    // Pointer to the uploader used to send JSON over HTTP.
-    JSONUploader* uploader_ = nullptr;
+    // Pointer to the transport used to send JSON over HTTP.
+    lmc::IHttpTransport* transport_ = nullptr;
     //number of frames currently stored in the buffer
     int framesCount_ = 0;
     // Session and device identifier, repeated in each JSON frame object.

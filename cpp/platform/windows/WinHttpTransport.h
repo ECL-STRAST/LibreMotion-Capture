@@ -3,12 +3,11 @@
 #include <utility>
 #include <vector>
 #include "platform/Interfaces.h"
+#include "HttpHeaders.h"
 
 namespace lmc {
 
-// Exact header set/order emitted by the legacy JSONUploader::uploadJson:
-// Content-Type, apikey, Authorization, Prefer. Parity-locked by tests/test_http_headers.cpp.
-std::vector<std::pair<std::string, std::string>> buildSupabaseHeaders(const std::string& apiKey);
+// buildSupabaseHeaders lives in core/HttpHeaders.h (single canonical builder, R9).
 
 // WinHTTP-backed transport. postJson is compiled only under _WIN32;
 // the declaration keeps this header host-includable for the header-builder test.

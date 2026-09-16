@@ -38,6 +38,7 @@ endif()
 set(TELEMETRIA_CORE_SOURCES
     core/api/TelemetryAPI.cpp
     core/TelemetryManager.cpp
+    core/HttpHeaders.cpp
     core/C3DRecorder.cpp
     core/config/ConfigParser.cpp
     core/platform/Log.cpp
