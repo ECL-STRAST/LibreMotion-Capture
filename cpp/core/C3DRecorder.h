@@ -6,6 +6,8 @@
 #include "TelemetryTypes.h"
 #include "VRTypes.h"
 
+namespace lmc { struct IPathResolver; }
+
 // Small helper that records one C3D file per VR session.
 // It is called from TelemetriaAPI: initialize -> recordFrame (many times) -> finalize.
 
@@ -15,12 +17,13 @@ public:
     ~C3DRecorder();
 
     // Initializes the recorder for a specific session.
-    // - cfg: telemetry configuration; used mainly for sessionId and for locating the directory where initialConfig.json is stored.
+    // - cfg: telemetry configuration; used mainly for sessionId.
     // - frameRate: sampling frequency (Hz) that will be written into the C3D POINT:RATE and ANALOG:RATE parameters.
+    // - resolver: platform path resolver used to build the per-session C3D output path.
     // Returns:
     //   true  if initialization succeeded or if already initialized.
     //   false if the output path could not be built and C3D recording is disabled for this run.
-    bool C3Dinitialize(const UploaderConfig& cfg, int frameRate);
+    bool C3Dinitialize(const UploaderConfig& cfg, int frameRate, lmc::IPathResolver* resolver);
 
     // Records a single frame of VR data (HMD, controllers, hands).
     // The frame is simply pushed into an internal vector and will be converted into C3D data later when finalize is called.
@@ -49,11 +52,6 @@ private:
 
     // We store all frames during the session and then write the C3D complete
     std::vector<VRFrameDataPlain> frames_;
-
-    // Builds the output file path for the C3D, same path to initialConfig.json
-    std::string buildOutputPath(const UploaderConfig& cfg);
-    // In case sessionId name isnt safe to be a part of filename
-    std::string sanitizeSessionId(const std::string& raw) const;
 
     // Construct points and analog channel names for c3d
     void buildPointNames(std::vector<std::string>& outPointNames) const;
