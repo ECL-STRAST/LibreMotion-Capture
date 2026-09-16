@@ -4,8 +4,10 @@ using UnityEngine;
 
 public static class TelemetriaAPI
 {
+#if UNITY_ANDROID
     [DllImport("telemetria")]
     private static extern void telemetry_set_java_context(IntPtr vm, IntPtr activity);
+#endif
 
     [DllImport("telemetria")]
     public static extern int telemetry_initialize(ref TelemetryConfigPlain cfg);
@@ -22,9 +24,10 @@ public static class TelemetriaAPI
     [DllImport("telemetria")]
     public static extern uint telemetry_get_feature_flags();
 
+#if UNITY_ANDROID
     public static void InyectarContextoJava()
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if !UNITY_EDITOR
         using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
         using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
         {
@@ -32,6 +35,7 @@ public static class TelemetriaAPI
         }
 #endif
     }
+#endif
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -39,6 +43,9 @@ public struct TelemetryConfigPlain
 {
     public IntPtr sessionId;
     public IntPtr deviceInfo;
+    // Debe ser el ultimo campo: coincide con el orden del struct C
+    // TelemetryConfigPlain {sessionId, deviceInfo, baseDir} (cpp/core/TelemetryTypes.h)
+    public IntPtr baseDir;
 }
 
 [StructLayout(LayoutKind.Sequential)]

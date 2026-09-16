@@ -12,6 +12,8 @@ public class TelemetriaBootstrap : MonoBehaviour
     IntPtr sessPtr;
     // Para obtener los dispositivos XR y sus estados
     IntPtr devInfoPtr;
+    // Directorio base para initialConfig.json y salida .c3d (Application.dataPath)
+    IntPtr baseDirPtr;
     List<InputDevice> devs = new List<InputDevice>();
     InputDevice hmd, left, right, leftMano, rightMano;
     // XR Hands subsystem
@@ -81,7 +83,9 @@ public class TelemetriaBootstrap : MonoBehaviour
         if (loader != null)
             _xrHands = loader.GetLoadedSubsystem<XRHandSubsystem>();
 
+#if UNITY_ANDROID
         TelemetriaAPI.InyectarContextoJava();
+#endif
 
         // Construye los strings que iran al nativo
         string sessionId = GenerateSessionIdHuman(Application.productName);
@@ -90,11 +94,14 @@ public class TelemetriaBootstrap : MonoBehaviour
         // Reserva memoria nativa y copia como char*
         sessPtr = Marshal.StringToHGlobalAnsi(sessionId);
         devInfoPtr = Marshal.StringToHGlobalAnsi(deviceInfo);
+        // baseDir: donde el nativo busca initialConfig.json y escribe los .c3d (Windows/Standalone)
+        baseDirPtr = Marshal.StringToHGlobalAnsi(Application.dataPath);
 
         var cfg = new TelemetryConfigPlain
         {
             sessionId = sessPtr,
-            deviceInfo = devInfoPtr
+            deviceInfo = devInfoPtr,
+            baseDir = baseDirPtr
         };
 
         int rc = TelemetriaAPI.telemetry_initialize(ref cfg);
@@ -326,6 +333,7 @@ public class TelemetriaBootstrap : MonoBehaviour
 
         if (sessPtr != IntPtr.Zero) Marshal.FreeHGlobal(sessPtr);
         if (devInfoPtr != IntPtr.Zero) Marshal.FreeHGlobal(devInfoPtr);
+        if (baseDirPtr != IntPtr.Zero) Marshal.FreeHGlobal(baseDirPtr);
     }
 
     void OnDeviceEvent(InputDevice device)
