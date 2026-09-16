@@ -1,4 +1,4 @@
-#include "JSONUploader.h"
+#include "android/AndroidHttpTransport.h"
 #include <android/log.h>
 
 #define LOG_TAG "telemetria"
@@ -33,59 +33,20 @@ static void logJavaException(JNIEnv* env, const char* where) {
     }
 }
 
+namespace lmc {
+
 // Store VM and Activity references for later use by JNI calls.
-void JSONUploader::setJavaContext(JavaVM* vm, jobject activityGlobalRef) {
+void AndroidHttpTransport::setJavaContext(JavaVM* vm, jobject activityGlobalRef) {
     vm_ = vm;
     activity_ = activityGlobalRef;
 }
 
-// Initialize uploader with configuration.
-// It just copies cfg into cfg_ and checks that we have both a VM and an Activity
-bool JSONUploader::initialize(const UploaderConfig& cfg) {
-    cfg_ = cfg;
-    if (!vm_ || !activity_) {
-        LOGE("JSONUploader initialize without VM or Activity");
-        return false;
-    }
-    return true;
-}
-
-// Currently placeholder; kept for symmetry with other components lifecycle.
-void JSONUploader::shutdown() {
-    // Noop for now
-}
-
-// Upload a JSON load to the configured endpoint.
-// Builds headers (Content-Type, apikey, Authorization) and delegates the actual HTTP call to callJavaMakeRequest using POST.
-bool JSONUploader::uploadJson(const std::string& jsonBody) {
-    // Must contain valid endpoint URL and API key
-    if (cfg_.endpointUrl.empty() || cfg_.apiKey.empty()) {
-        LOGE("Missing supabase config");
-        return false;
-    }
-    std::string url = cfg_.endpointUrl;
-    LOGI("uploadJson: url=%s body.size=%d", url.c_str(), (int)jsonBody.size());
-
-    // Build the HTTP headers for typical backend:
-    //   Content-Type: application/json
-    //   apikey: <api key>
-    //   Authorization: Bearer <api key>
-    std::vector<std::pair<std::string,std::string>> headers = {
-            {"Content-Type", "application/json"},
-            {"apikey", cfg_.apiKey},
-            {"Authorization", std::string("Bearer ") + cfg_.apiKey},
-            {"Prefer", "return=representation"}
-            // Here can be added more headers here if needed (e.g. Prefer: return=minimal)
-    };
-    return callJavaMakeRequest("POST", url, jsonBody, headers);
-}
-
 // Core JNI bridge that calls the Java static method:
 //   byte[] AyudanteHttp.makeRequest(String method, String url, byte[] body, Map<String,String> headers)
-bool JSONUploader::callJavaMakeRequest(const std::string& method,
-                                          const std::string& url,
-                                          const std::string& body,
-                                          const std::vector<std::pair<std::string,std::string>>& headers) {
+// The HTTP method is fixed to POST; headers arrive already built by the core.
+bool AndroidHttpTransport::postJson(const std::string& url,
+                                    const std::string& body,
+                                    const std::vector<std::pair<std::string, std::string>>& headers) {
     if (!vm_ || !activity_) return false;
 
     JNIEnv* env = nullptr;
@@ -131,7 +92,7 @@ bool JSONUploader::callJavaMakeRequest(const std::string& method,
         return false;
     }
 
-    jstring jMethod = env->NewStringUTF(method.c_str());
+    jstring jMethod = env->NewStringUTF("POST");
     jstring jUrl = env->NewStringUTF(url.c_str());
 
     // copies the string to the java array
@@ -157,7 +118,7 @@ bool JSONUploader::callJavaMakeRequest(const std::string& method,
     }
 
     jbyteArray jResp = (jbyteArray)env->CallStaticObjectMethod(helperCls, makeReq, jMethod, jUrl, jBody, jMap);
-    logJavaException(env, "JSONUploader.callJavaMakeRequest");
+    logJavaException(env, "AndroidHttpTransport.postJson");
 
     //clean any local ref created
     if (jBody) env->DeleteLocalRef(jBody);
@@ -190,12 +151,4 @@ bool JSONUploader::callJavaMakeRequest(const std::string& method,
     return true;
 }
 
-// Small helper to join URL parts, avoiding duplicated slashes.
-// Example: urlJoin("https://example.com/api", "frames2") -> "https://example.com/api/frames2"
-static std::string urlJoin(const std::string& a, const std::string& b) {
-    if (a.empty()) return b;
-    if (a.back() == '/') return a + b;
-    return a + "/" + b;
-}
-
-
+} // namespace lmc
