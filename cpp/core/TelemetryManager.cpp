@@ -45,6 +45,17 @@ bool GestorTelemetria::initialize(const UploaderConfig& cfg, lmc::IHttpTransport
             buffer_.reserve(cfg_.framesPerFile);
         }
     // --- Start background worker thread ---
+    // Double initialize() without a matching shutdown(): the old worker is still
+    // joinable and assigning to it would call std::terminate. Signal stop first so
+    // the join drains it instead of hanging forever, then start fresh.
+    {
+        std::lock_guard<std::mutex> lk(qmtx_);
+        if (worker_.joinable()) {
+            stopWorker_ = true;
+            qcv_.notify_all();
+        }
+    }
+    if (worker_.joinable()) worker_.join();
     {
         std::lock_guard<std::mutex> lk(qmtx_);
         stopWorker_ = false;
