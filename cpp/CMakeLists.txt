@@ -91,22 +91,41 @@ if(TELEMETRIA_PLATFORM_SOURCES)
         target_link_libraries(telemetria PRIVATE winhttp)
     endif()
     # Cheap guard: fail the build if the C ABI disappears from the artifact again.
-    add_custom_command(TARGET telemetria POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E echo "checking exported C ABI..."
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_exports.sh
-                $<TARGET_FILE:telemetria> ${CMAKE_OBJDUMP}
-                telemetry_initialize telemetry_record_frame telemetry_force_upload
-                telemetry_shutdown telemetry_get_feature_flags
-        COMMENT "Verifying telemetria C ABI exports"
-        VERBATIM)
-    if(ANDROID)
-        # JNI extras that must survive linking on Android.
+    # Pick a symbol dump tool that actually exists: MSVC has no objdump (CMAKE_OBJDUMP
+    # is empty -> the first symbol would be consumed as the tool argument) but ships
+    # dumpbin; MinGW/NDK have objdump. The gate is a POSIX shell script, and cmd.exe
+    # cannot execute a .sh, so a shell is required too. When the tool or the shell is
+    # missing (bare Windows shell) the step is SKIPPED with a status message: a missing
+    # analysis tool must never hard-fail an otherwise-good build.
+    find_program(TELEMETRIA_DUMPBIN NAMES dumpbin)
+    find_program(TELEMETRIA_POSIX_SHELL NAMES sh bash)
+    set(TELEMETRIA_EXPORT_TOOL "")
+    if(TELEMETRIA_DUMPBIN)
+        set(TELEMETRIA_EXPORT_TOOL "${TELEMETRIA_DUMPBIN}")
+    elseif(CMAKE_OBJDUMP AND EXISTS "${CMAKE_OBJDUMP}")
+        set(TELEMETRIA_EXPORT_TOOL "${CMAKE_OBJDUMP}")
+    endif()
+    if(TELEMETRIA_EXPORT_TOOL AND TELEMETRIA_POSIX_SHELL)
         add_custom_command(TARGET telemetria POST_BUILD
-            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_exports.sh
-                    $<TARGET_FILE:telemetria> ${CMAKE_OBJDUMP}
-                    telemetry_set_java_context JNI_OnLoad
-            COMMENT "Verifying telemetria JNI exports"
+            COMMAND ${CMAKE_COMMAND} -E echo "checking exported C ABI..."
+            COMMAND "${TELEMETRIA_POSIX_SHELL}" "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_exports.sh"
+                    $<TARGET_FILE:telemetria> "${TELEMETRIA_EXPORT_TOOL}"
+                    telemetry_initialize telemetry_record_frame telemetry_force_upload
+                    telemetry_shutdown telemetry_get_feature_flags
+            COMMENT "Verifying telemetria C ABI exports"
             VERBATIM)
+        if(ANDROID)
+            # JNI extras that must survive linking on Android.
+            add_custom_command(TARGET telemetria POST_BUILD
+                COMMAND "${TELEMETRIA_POSIX_SHELL}" "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_exports.sh"
+                        $<TARGET_FILE:telemetria> "${TELEMETRIA_EXPORT_TOOL}"
+                        telemetry_set_java_context JNI_OnLoad
+                COMMENT "Verifying telemetria JNI exports"
+                VERBATIM)
+        endif()
+    else()
+        message(STATUS "telemetria: no dumpbin/objdump (or no POSIX shell) found, "
+                       "skipping the C ABI export check")
     endif()
 endif()
 
