@@ -4,6 +4,27 @@ LibreMotion_Capture es una libreria nativa desarrollada en C++ para Android cuyo
 
 La libreria forma parte del ecosistema LibreMotion y esta disenada para facilitar la adquisicion, normalizacion y persistencia de datos de movimiento con fines de analisis biomecanico, investigacion o telemetria.
 
+> Este README tambien esta disponible en [ingles (README.md)](README.md).
+
+---
+
+## Plataformas
+
+La libreria se compila desde un unico codigo para dos destinos, compartiendo el mismo formato
+JSON, el modelo de marcadores C3D, los flags de funcionalidad y las llamadas de ciclo de vida:
+
+- **Android / Meta Quest** — `libtelemetria.so` + AAR. Comportamiento sin cambios; config leido
+  desde `/sdcard/Android/data/<pkg>/files/`. Ver `Unity_Implementation/README_Unity.md` y
+  `Unreal_Implementation/README_Unreal.md`.
+- **Windows x64 / PC-VR (SteamVR)** — `telemetria.dll` (+ `telemetria.lib` con MSVC), capturado
+  mediante los plug-ins **OpenXR** de los motores (Unity: OpenXR + OpenXR Hands; Unreal: OpenXR
+  con el runtime SteamVR). El seguimiento de manos es opcional; HMD + mandos funcionan sin el.
+  Ver **[docs/steamvr-windows.md](docs/steamvr-windows.md)** (compilacion, ubicaciones del config,
+  verificacion y esquema), junto con `Unity_Implementation/README_Unity_Windows.md` y
+  `Unreal_Implementation/README_Unreal_Windows.md`.
+
+Los comandos de compilacion nativa de cada destino estan en **[cpp/README-build.md](cpp/README-build.md)**.
+
 ---
 
 ## Contenido del repositorio
