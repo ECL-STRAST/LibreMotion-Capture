@@ -1,2 +1,3 @@
 .worktrees/
 cpp/build-*/
+LibreriaTelemetria/**/build/
