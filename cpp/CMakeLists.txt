@@ -53,19 +53,60 @@ target_include_directories(telemetria_core PUBLIC
 if(NOT MSVC)
     target_compile_options(telemetria_core PRIVATE -fno-exceptions -fno-rtti)
 endif()
+# On Windows the API entry points must be *definitions* (dllexport), not dllimport,
+# whenever this archive is compiled: a dllimport declaration plus a local definition is
+# an error on MSVC (C2491) and a -Wattributes warning on MinGW, and any consumer that
+# includes TelemetryAPI.h while linking the static archive would otherwise look for the
+# nonexistent __imp_* thunks (verified: undefined reference to `__imp_telemetry_initialize`).
+# PUBLIC so static consumers (tests) see the same linkage as the archive provides.
+if(WIN32)
+    target_compile_definitions(telemetria_core PUBLIC TELEMETRIA_EXPORTS)
+endif()
 target_link_libraries(telemetria_core PUBLIC ezc3d)
 
 # SHARED telemetry library (engine-facing C ABI).
 if(TELEMETRIA_PLATFORM_SOURCES)
-    add_library(telemetria SHARED ${TELEMETRIA_PLATFORM_SOURCES})
+    # The C ABI entry points live in core/api/TelemetryAPI.cpp, which otherwise only
+    # reaches telemetria_core (STATIC). A static archive member is pulled in only if
+    # some symbol is still undefined, and nothing in the platform sources references
+    # it -> the object is dropped and the shared lib exports nothing usable
+    # (Windows: Unreal fails with LNK2019 / delay-load; Android: the .so silently
+    # loses all 5 portable entry points). Fix (chosen over a .def file, which would
+    # need per-toolchain link flags and still compile the core copy as dllimport):
+    # always compile the API translation unit into the shared target. On Windows
+    # TELEMETRIA_EXPORTS turns them into __declspec(dllexport) so MSVC also emits the
+    # telemetria.lib import lib Unreal links; elsewhere default visibility applies.
+    # The core archive keeps the same TU for static consumers (host tests).
+    add_library(telemetria SHARED ${TELEMETRIA_PLATFORM_SOURCES} core/api/TelemetryAPI.cpp)
     if(NOT MSVC)
         target_compile_options(telemetria PRIVATE -fno-exceptions -fno-rtti)
+    endif()
+    if(WIN32)
+        target_compile_definitions(telemetria PRIVATE TELEMETRIA_EXPORTS)
     endif()
     target_link_libraries(telemetria PRIVATE telemetria_core)
     if(ANDROID)
         target_link_libraries(telemetria PRIVATE log)
     elseif(WIN32)
         target_link_libraries(telemetria PRIVATE winhttp)
+    endif()
+    # Cheap guard: fail the build if the C ABI disappears from the artifact again.
+    add_custom_command(TARGET telemetria POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "checking exported C ABI..."
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_exports.sh
+                $<TARGET_FILE:telemetria> ${CMAKE_OBJDUMP}
+                telemetry_initialize telemetry_record_frame telemetry_force_upload
+                telemetry_shutdown telemetry_get_feature_flags
+        COMMENT "Verifying telemetria C ABI exports"
+        VERBATIM)
+    if(ANDROID)
+        # JNI extras that must survive linking on Android.
+        add_custom_command(TARGET telemetria POST_BUILD
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_exports.sh
+                    $<TARGET_FILE:telemetria> ${CMAKE_OBJDUMP}
+                    telemetry_set_java_context JNI_OnLoad
+            COMMENT "Verifying telemetria JNI exports"
+            VERBATIM)
     endif()
 endif()
 

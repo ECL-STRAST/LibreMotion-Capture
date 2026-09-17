@@ -24,7 +24,8 @@ cmake --build cpp/build-win
 ```
 
 Produces `telemetria.dll` + `telemetria.lib` (MSVC import lib — the name the
-Unreal build expects). The `winhttp` link library resolves automatically via
+Unreal build expects; it is emitted because the C ABI is `__declspec(dllexport)`).
+The `winhttp` link library resolves automatically via
 MSVC's `#pragma comment(lib, ...)`; CMake's `target_link_libraries(... winhttp)`
 covers the import as well.
 
@@ -59,6 +60,31 @@ cmake --build cpp/build-arm64
 
 Produces `libtelemetria.so` (ELF64 / AArch64). Links against the NDK `log`
 library for the Android log sink. Tests are never built on Android.
+
+## Exported C ABI (always verify the artifacts)
+
+`core/api/TelemetryAPI.cpp` is compiled into the SHARED `telemetria` target (not only
+into the static `telemetria_core`): a static archive member is pulled in only when some
+symbol is still undefined, so a shared lib built purely from the platform sources would
+silently export nothing usable. The entry points are marked through the `TELEMETRIA_API`
+macro: `__declspec(dllexport)` when `TELEMETRIA_EXPORTS` is set (the SHARED target,
+Windows) / `__declspec(dllimport)` for consumers, and default visibility elsewhere.
+
+```sh
+# Windows (MinGW cross-build shown here; MSVC: dumpbin /exports telemetria.dll)
+x86_64-w64-mingw32-objdump -p cpp/build-win/libtelemetria.dll | grep telemetry_
+# expect exactly: telemetry_initialize, telemetry_record_frame, telemetry_force_upload,
+# telemetry_shutdown, telemetry_get_feature_flags
+# telemetry_set_java_context MUST be absent on Windows (Android-only)
+
+# Android
+$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf --dyn-syms \
+    cpp/build-arm64/libtelemetria.so | grep -E "telemetry_|JNI_OnLoad"
+# expect the 5 above + telemetry_set_java_context + JNI_OnLoad
+```
+
+Both builds run this check automatically (`cpp/scripts/check_exports.sh` as a `POST_BUILD`
+step), so losing an export breaks the build instead of shipping a broken artifact.
 
 ## Notes
 

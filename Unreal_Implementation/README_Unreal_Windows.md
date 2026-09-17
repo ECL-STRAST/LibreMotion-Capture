@@ -21,13 +21,33 @@ cmake -S cpp -B cpp/build-win -G "Ninja" -DTELEMETRIA_BUILD_TESTS=ON
 cmake --build cpp/build-win
 ```
 
-This produces **both** `telemetria.dll` and `telemetria.lib`.
+This produces **both** `telemetria.dll` and `telemetria.lib` (the MSVC linker emits the
+import lib because the C ABI is marked `__declspec(dllexport)` via `TELEMETRIA_EXPORTS`,
+see `cpp/CMakeLists.txt`).
 
 > **Important (`.lib` vs `.a`):** Unreal on Win64 uses the MSVC linker and needs the
-> MSVC import library named `telemetria.lib`. A MinGW-w64 cross-build instead produces
-> `libtelemetria.dll` + `libtelemetria.dll.a` (GNU-style import lib), which the MSVC
-> linker cannot consume. See `cpp/README-build.md` ("Windows x64 cross-compiled from
-> Linux") — use the MSVC build when linking from Unreal.
+> MSVC import library named `telemetria.lib`. The MinGW-w64 cross-build instead produces
+> **`libtelemetria.dll` + `libtelemetria.dll.a`** — the GNU-style import lib is *not* named
+> `telemetria.lib` and the MSVC linker cannot consume it, so the Win64 Unreal target
+> (`PublicAdditionalLibraries.Add(.../lib/telemetria.lib)`) fails to link with MinGW
+> artifacts. Use the MSVC build when linking from Unreal. See
+> `cpp/README-build.md` ("Windows x64 cross-compiled from Linux").
+
+### Verify the DLL actually exports the C ABI
+
+Do not trust the file name — check the export table:
+
+```sh
+# MinGW-built artifact (names carry the lib*/.dll.a suffix)
+x86_64-w64-mingw32-objdump -p cpp/build-win/libtelemetria.dll | grep telemetry_
+```
+
+Expected: exactly the 5 entry points the Windows plugin links —
+`telemetry_initialize`, `telemetry_record_frame`, `telemetry_force_upload`,
+`telemetry_shutdown`, `telemetry_get_feature_flags`. `telemetry_set_java_context` must be
+**absent** on Windows (Android-only export). The same check runs automatically as a
+CMake `POST_BUILD` step (`cpp/scripts/check_exports.sh`), so a build that loses the
+exports fails instead of producing an unloadable DLL.
 
 ---
 

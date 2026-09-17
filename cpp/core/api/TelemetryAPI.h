@@ -8,9 +8,24 @@
 #include <jni.h>
 #endif
 
-// Export macro para Android (makes the function visible oustide de .so)
+// Export macro:
+//  - Windows (MSVC/MinGW): dllexport when we are building the code that *defines* the
+//    entry points (TELEMETRIA_EXPORTS, set on the SHARED telemetria target and, on
+//    Windows, on the STATIC telemetria_core that also holds a copy: a dllimport
+//    declaration there would mean "definition of dllimport function" = MSVC C2491),
+//    and dllimport for consumers that link the import lib of telemetria.dll.
+//  - everywhere else (Linux/Android): default visibility so the C ABI stays
+//    visible outside the .so.
 #ifndef TELEMETRIA_API
-#define TELEMETRIA_API __attribute__((visibility("default")))
+#  if defined(_WIN32)
+#    if defined(TELEMETRIA_EXPORTS)
+#      define TELEMETRIA_API __declspec(dllexport)
+#    else
+#      define TELEMETRIA_API __declspec(dllimport)
+#    endif
+#  else
+#    define TELEMETRIA_API __attribute__((visibility("default")))
+#  endif
 #endif
 
 #ifdef __cplusplus
