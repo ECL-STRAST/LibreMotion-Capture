@@ -9,11 +9,12 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# ezc3d: always static, never its tests
+# ezc3d: always static, never its tests or its examples. These are the option names
+# the vendored version actually defines; the EZC3D_* spellings used here previously
+# matched nothing and silently left the examples building in every configuration.
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-set(EZC3D_BUILD_SHARED OFF CACHE BOOL "" FORCE)
-set(EZC3D_BUILD_STATIC ON  CACHE BOOL "" FORCE)
-set(EZC3D_BUILD_TESTS  OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTS       OFF CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLE     OFF CACHE BOOL "" FORCE)
 add_subdirectory(thirdparty/ezc3d)
 
 # ---- Platform sources selection (no #ifdef inside core .cpp) ----
@@ -141,6 +142,7 @@ if(TELEMETRIA_BUILD_TESTS AND NOT ANDROID)
         tests/test_manager.cpp
         tests/test_c3d_recorder.cpp
         tests/test_http_headers.cpp
+        tests/test_winhttp_target.cpp
         platform/windows/WinPathResolver.cpp
         platform/windows/WinHttpTransport.cpp)
     target_link_libraries(telemetria_tests PRIVATE telemetria_core gtest gtest_main)
