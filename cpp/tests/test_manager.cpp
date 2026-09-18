@@ -46,3 +46,64 @@ TEST(Manager, HandTrackingSectionAppearsWhenEnabled) {
     EXPECT_NE(std::string::npos, http.posts[0].body.find(
         R"("hands":{"left":{"joint_count":0,"joints":[]},"right":{"joint_count":0,"joints":[]}})"));
 }
+
+TEST(Manager, SerializesConfiguredButtonAndJointFields) {
+    MockHttp http;
+    UploaderConfig cfg; configSetDefaults(cfg);
+    cfg.framesPerFile = 1;
+    cfg.trigger = true; cfg.grip = true;
+    cfg.primaryButton = true; cfg.secondaryButton = true;
+    cfg.joystick = true; cfg.handTracking = true;
+    GestorTelemetria m; ASSERT_TRUE(m.initialize(cfg, &http));
+
+    VRFrameDataPlain f = makeFrame(1.5);
+    f.leftCtrl.isActive = 1;
+    f.leftCtrl.trigger = 0.75f;
+    f.leftCtrl.grip = 0.5f;
+    f.leftCtrl.buttons = 0x1u;          // BTN_PRIMARY set, BTN_SECONDARY clear
+    f.leftCtrl.stickX = 0.25f;
+    f.leftCtrl.stickY = -0.25f;
+    f.leftHandJointCount = 2;
+    f.leftHandJoints[0] = {8, 1, 1.5f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1, {0}};
+    f.leftHandJoints[1] = {9, 0, 2.5f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1, {0}};
+    m.recordFrame(f);
+    m.shutdown();
+
+    ASSERT_EQ(http.posts.size(), 1u);
+    const std::string& body = http.posts[0].body;
+    EXPECT_NE(std::string::npos, body.find("\"trigger\":0.75")) << body;
+    EXPECT_NE(std::string::npos, body.find("\"grip\":0.5")) << body;
+    EXPECT_NE(std::string::npos, body.find("\"primary\":true")) << body;
+    EXPECT_NE(std::string::npos, body.find("\"secondary\":false")) << body;
+    EXPECT_NE(std::string::npos, body.find("\"joystick_x\":0.25")) << body;
+    EXPECT_NE(std::string::npos, body.find("\"joystick_y\":-0.25")) << body;
+    EXPECT_NE(std::string::npos, body.find(
+        "\"joints\":[{\"id\":8,\"state\":1,\"orientation\":[0,0,0,1],\"position\":[1.5,0,0],\"has_pose\":true},"
+        "{\"id\":9,\"state\":0,\"orientation\":[0,0,0,1],\"position\":[2.5,0,0],\"has_pose\":true}]")) << body;
+}
+
+TEST(Manager, DropsOldestChunksWhenUploadsFallBehind) {
+    MockHttp http;
+    UploaderConfig cfg; configSetDefaults(cfg); cfg.framesPerFile = 1;
+    GestorTelemetria m; ASSERT_TRUE(m.initialize(cfg, &http));
+
+    http.gate.hold(1);                    // the first upload blocks the worker
+    m.recordFrame(makeFrame(0));
+    ASSERT_TRUE(http.gate.waitUntilInside());
+    for (int i = 1; i <= 6; ++i) m.recordFrame(makeFrame(i));  // 6 more chunks pile up
+    http.gate.release();
+    m.shutdown();
+
+    // maxQueuedChunks_ is 4, so of the 6 chunks produced while the worker was busy
+    // only the 4 newest survive: timestamps 3..6, plus the one already in flight.
+    ASSERT_EQ(http.posts.size(), 5u);
+    for (int t = 1; t <= 2; ++t)
+        EXPECT_EQ(std::string::npos, http.posts[0].body.find("\"timestamp\":" + std::to_string(t)))
+            << "chunk " << t << " should have been dropped";
+    for (int t = 3; t <= 6; ++t) {
+        bool found = false;
+        for (size_t p = 0; p < http.posts.size(); ++p)
+            if (http.posts[p].body.find("\"timestamp\":" + std::to_string(t)) != std::string::npos) found = true;
+        EXPECT_TRUE(found) << "chunk " << t << " should have been uploaded";
+    }
+}
