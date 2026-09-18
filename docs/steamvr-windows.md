@@ -185,6 +185,38 @@ Leave `handTracking=false` (the default) to capture HMD + controllers only.
   continue.
 - **`telemetry_set_java_context` is Android-only** — it is not present in the Windows DLL
   and is guarded by `#if UNITY_ANDROID` in `TelemetriaAPI.cs`.
+- **Re-initializing starts a new session.** `telemetry_initialize` after a
+  `telemetry_shutdown` now produces a second C3D file; previously the recorder stayed
+  `finalized_` and every frame of the second (and all later) sessions was dropped. This
+  matters on Windows because neither Unity play mode nor Unreal PIE reloads the native
+  library between runs. Re-initializing *without* a preceding shutdown is ignored: the
+  session in progress is never clobbered.
+- **`baseDir` is re-read on every `telemetry_initialize`.** The newest non-empty value
+  wins for both `initialConfig.json` and the C3D output path; passing `NULL` falls back
+  to the executable directory.
+- **C3D is buffered in memory until shutdown.** Every frame stays in the recorder until
+  `telemetry_shutdown` writes the file: `sizeof(VRFrameDataPlain)` is 2552 bytes, so a
+  90 Hz hour-long PC-VR session holds roughly 800 MB in `C3DRecorder::frames_`
+  (`C3Dflush()` is still a no-op stub). Keep sessions bounded, or record at a lower rate.
+- **A C3D write that cannot open its output is reported, not swallowed.** `ezc3d` opens
+  the file and never checks `is_open()`, so the recorder now verifies the artifact after
+  writing and logs `write produced no file at '...' (directory missing or read-only?)`
+  instead of claiming success. Prefer a writable `baseDir` (see §3 — `Application.dataPath`
+  under `Program Files` is typically not writable).
+- **Proxy resolution differs per platform.** Android goes through the JVM/Java URL stack,
+  which honours the system/IE proxy configuration; Windows uses
+  `WINHTTP_ACCESS_TYPE_DEFAULT_PROXY`, which reads the WinHTTP machine configuration
+  (`netsh winhttp show proxy`) and is *not* the same thing. Behind an enterprise proxy,
+  configure WinHTTP explicitly or uploads will fail only on Windows.
+- **Android keeps its Activity reference after shutdown.** The global reference is
+  released when a new context is injected, not by `telemetry_shutdown`, so
+  `telemetry_initialize` can be called again without re-injecting. The Android-only
+  build used to release it at shutdown; the reference lives for the process lifetime now.
+- **Unreal: background teardown is Android-only.** `OnAppWillEnterBackground` (flush +
+  shutdown) is subscribed under `#if PLATFORM_ANDROID`. On Win64,
+  `ApplicationWillEnterBackgroundDelegate` fires whenever the window loses activation, so
+  keeping it there would end a PC-VR session on an alt-tab; Win64 sessions end in
+  `EndPlay`/`OnComponentDestroyed` as before.
 - **Unverified on CI.** End-to-end capture on a real PC-VR headset has not been executed on
   the headless CI host (no SteamVR/headset, no Unreal); the portable core is covered by the
   GoogleTest suite (`cpp/build-host/telemetria_tests`).

@@ -11,8 +11,11 @@ cmake --build cpp/build-host
 cpp/build-host/telemetria_tests
 ```
 
-Tests link against the static `telemetria_core` plus GoogleTest and exercise
-the Windows path-resolver/HTTP transports natively where possible.
+Tests link against the static `telemetria_core` plus GoogleTest and run on Linux.
+They cover the core pipeline natively (config parsing, buffering/backpressure, the
+JSON wire format, C3D write + read-back) plus the platform pieces that are pure
+standard C++ (`WinPathResolver`, `winHttpRequestTarget`). `WinHttpTransport::postJson`
+itself is `#ifdef _WIN32` and is only compile-verified by the MinGW cross-build.
 
 ## Windows x64 (MSVC — what Unreal loads, see Task 12)
 
