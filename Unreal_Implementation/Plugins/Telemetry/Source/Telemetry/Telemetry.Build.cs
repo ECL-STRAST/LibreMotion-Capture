@@ -29,7 +29,7 @@ public class Telemetry : ModuleRules
             // 1) AAR (Java + permiso INTERNET + proguard keep), via APL
             string APL = System.IO.Path.Combine(ModuleDirectory, "Telemetry_APL.xml");
             AdditionalPropertiesForReceipt.Add("AndroidPlugin", APL);
-            // 2) .so “link-only”: el AAR pone el .so dentro del APK,pero el enlazador necesita verlo en build
+            // 2) .so ï¿½link-onlyï¿½: el AAR pone el .so dentro del APK,pero el enlazador necesita verlo en build
             string LibForLink = System.IO.Path.GetFullPath(System.IO.Path.Combine(ModuleDirectory, "../ThirdParty/Android/arm64-v8a/libtelemetria.so"));
             if (System.IO.File.Exists(LibForLink))
             {
@@ -46,9 +46,30 @@ public class Telemetry : ModuleRules
             // libtelemetria.dll.a) under Source/ThirdParty/Windows/{bin,lib}.
             // Ver cpp/README-build.md y Unreal_Implementation/README_Unreal_Windows.md
             string Third = System.IO.Path.Combine(ModuleDirectory, "../ThirdParty/Windows");
-            PublicAdditionalLibraries.Add(System.IO.Path.Combine(Third, "lib/telemetria.lib"));
-            PublicDelayLoadDLLs.Add("telemetria.dll");
-            RuntimeDependencies.Add(System.IO.Path.Combine(Third, "bin/telemetria.dll"));
+            string ImportLib = System.IO.Path.Combine(Third, "lib/telemetria.lib");
+            string RuntimeDll = System.IO.Path.Combine(Third, "bin/telemetria.dll");
+            // Mismo trato que la rama Android: avisar sin romper el arranque del mÃ³dulo,
+            // para que el fallo sea legible y no un LNK1181 sin contexto.
+            if (System.IO.File.Exists(ImportLib))
+            {
+                PublicAdditionalLibraries.Add(ImportLib);
+                PublicDelayLoadDLLs.Add("telemetria.dll");
+            }
+            else
+            {
+                System.Console.WriteLine("WARNING: telemetria.lib not found: " + ImportLib
+                    + " -> build the Win64 library (cpp/README-build.md) and place it, with telemetria.dll, under "
+                    + Third + "/{lib,bin}. Linking fails with unresolved telemetry_* until then.");
+            }
+            if (System.IO.File.Exists(RuntimeDll))
+            {
+                RuntimeDependencies.Add(RuntimeDll);
+            }
+            else
+            {
+                System.Console.WriteLine("WARNING: telemetria.dll not found: " + RuntimeDll
+                    + " -> it must be staged next to the binary at runtime.");
+            }
             // add `winhttp` is unnecessary: the DLL links it privately.
         }
     }

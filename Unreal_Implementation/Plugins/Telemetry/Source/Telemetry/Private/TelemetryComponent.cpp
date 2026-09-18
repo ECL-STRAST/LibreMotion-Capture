@@ -323,9 +323,14 @@ void UTelemetryComponent::BeginPlay()
 
     // subscribe to end of frame tick
     HandleEndFrame = FCoreDelegates::OnEndFrame.AddUObject(this, &UTelemetryComponent::OnEndFrameTick);
-    // subscribe lifecycle for background flush
+#if PLATFORM_ANDROID
+    // subscribe lifecycle for background flush.
+    // Android only: the OS can kill the process, and the JNI bridge dies with it. On
+    // Win64 this delegate fires whenever the window loses activation, so tearing
+    // telemetry down there would end a PC-VR session on an alt-tab and never restart it.
     HandleWillEnterBackground = FCoreDelegates::ApplicationWillEnterBackgroundDelegate.AddUObject(
         this, &UTelemetryComponent::OnAppWillEnterBackground);
+#endif
 }
 
 void UTelemetryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -839,6 +844,16 @@ FQuat UTelemetryComponent::ToUnityQuat(const FQuat& Q)
 void UTelemetryComponent::OnAppWillEnterBackground()
 {
     UE_LOG(LogTelemetry, Log, TEXT("[Telemetry] OnAppWillEnterBackground"));
+
+    // Unsubscribe before tearing the session down: OnEndFrameTick would otherwise keep
+    // calling telemetry_record_frame on a manager whose worker has already been joined
+    // and whose recorder is finalized.
+    if (HandleEndFrame.IsValid())
+    {
+        FCoreDelegates::OnEndFrame.Remove(HandleEndFrame);
+        HandleEndFrame.Reset();
+    }
+
     telemetry_force_upload();
     telemetry_shutdown();
 
