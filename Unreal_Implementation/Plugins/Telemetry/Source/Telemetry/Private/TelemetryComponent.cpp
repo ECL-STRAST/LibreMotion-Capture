@@ -78,7 +78,7 @@ extern "C" {
         const char* baseDir;
     };
 
-#if !PLATFORM_MAC /* both Android and Win64 link telemetria */
+#if PLATFORM_ANDROID || PLATFORM_WINDOWS /* the only platforms Telemetry.Build.cs links telemetria for */
     int  telemetry_initialize(const TelemetryConfigPlain* cfg);
     void telemetry_record_frame(const VRFrameDataPlain* frame);
     void telemetry_force_upload();
