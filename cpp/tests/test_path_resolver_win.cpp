@@ -18,3 +18,16 @@ TEST(WinPathResolver, SanitizesSessionId) {
     ASSERT_TRUE(r.c3dFilePath("bad/name with spaces", c3d));
     EXPECT_EQ(c3d, "D:/x/session_bad_name_with_spaces.c3d");
 }
+
+TEST(WinPathResolver, LaterBaseDirReplacesEarlierOne) {
+    WinPathResolver r("C:/First");
+    std::string out;
+    ASSERT_TRUE(r.c3dFilePath("s1", out));
+    EXPECT_EQ(out, "C:/First/session_s1.c3d");
+
+    r.setBaseDir("D:/Second");
+    ASSERT_TRUE(r.c3dFilePath("s1", out));
+    EXPECT_EQ(out, "D:/Second/session_s1.c3d");
+    ASSERT_TRUE(r.configFilePath(out));
+    EXPECT_EQ(out, "D:/Second/initialConfig.json");
+}

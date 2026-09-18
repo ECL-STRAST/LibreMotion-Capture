@@ -9,6 +9,16 @@
 
 namespace lmc {
 
+std::wstring winHttpRequestTarget(const std::wstring& urlPath, const std::wstring& extraInfo) {
+    std::wstring target = urlPath.empty() ? std::wstring(1, L'/') : urlPath;
+    if (target.front() != L'/') target.insert(target.begin(), L'/');
+    if (!extraInfo.empty()) {
+        if (extraInfo.front() != L'?') target += L'?';
+        target += extraInfo;
+    }
+    return target;
+}
+
 #ifdef _WIN32
 
 static std::wstring toWide(const std::string& s) {
@@ -27,6 +37,7 @@ bool WinHttpTransport::postJson(const std::string& url,
     const std::wstring wUrl = toWide(url);
     wchar_t hostBuf[256];
     wchar_t pathBuf[2048];
+    wchar_t extraBuf[1024];
     URL_COMPONENTS uc;
     ZeroMemory(&uc, sizeof(uc));
     uc.dwStructSize = sizeof(uc);
@@ -34,6 +45,11 @@ bool WinHttpTransport::postJson(const std::string& url,
     uc.dwHostNameLength = 256;
     uc.lpszUrlPath = pathBuf;
     uc.dwUrlPathLength = 2048;
+    // Without this buffer the query string is silently dropped, so a Supabase
+    // endpoint such as /rest/v1/frames?on_conflict=session would POST to a
+    // different resource than the same URL does on Android (Java keeps the query).
+    uc.lpszExtraInfo = extraBuf;
+    uc.dwExtraInfoLength = 1024;
     if (!WinHttpCrackUrl(wUrl.c_str(), (DWORD)wUrl.length(), 0, &uc)) {
         Log::err("WinHttpCrackUrl failed url=%.200s err=%lu", url.c_str(), GetLastError());
         return false;
@@ -62,9 +78,11 @@ bool WinHttpTransport::postJson(const std::string& url,
     }
 
     // 4) POST request; TLS when the URL scheme was https.
-    const wchar_t* path = (uc.dwUrlPathLength == 0) ? L"/" : uc.lpszUrlPath;
+    const std::wstring requestTarget = winHttpRequestTarget(
+        std::wstring(uc.lpszUrlPath, uc.dwUrlPathLength),
+        std::wstring(uc.lpszExtraInfo, uc.dwExtraInfoLength));
     HINTERNET hRequest = WinHttpOpenRequest(
-        hConnect, L"POST", path, nullptr,
+        hConnect, L"POST", requestTarget.c_str(), nullptr,
         WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
         uc.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0);
     if (!hRequest) {

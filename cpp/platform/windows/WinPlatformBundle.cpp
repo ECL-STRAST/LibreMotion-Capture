@@ -27,6 +27,10 @@ PlatformBundle buildPlatformBundle(const char* baseDir) {
     static WinLogSink      log;
     static WinHttpTransport http;
     static WinPathResolver  paths(base);
+    // The statics are constructed on the first call only, so a second
+    // telemetry_initialize with a different baseDir would otherwise keep writing
+    // the config/C3D paths under the first one.
+    paths.setBaseDir(base);
     return PlatformBundle{ &http, &paths, &log };
 }
 } // namespace lmc

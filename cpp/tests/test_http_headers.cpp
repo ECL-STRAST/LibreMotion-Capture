@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "windows/WinHttpTransport.h"
+#include "HttpHeaders.h"
 using namespace lmc;
 TEST(HttpHeaders, MatchesOriginalSet) {
     auto h = buildSupabaseHeaders("K");
