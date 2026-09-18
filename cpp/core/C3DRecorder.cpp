@@ -33,9 +33,18 @@ bool C3DRecorder::C3DisInitialized() const {
 
 bool C3DRecorder::C3Dinitialize(const UploaderConfig& cfg, int frameRate, lmc::IPathResolver* resolver) {
     std::lock_guard<std::mutex> lock(mtx_);
-    if (initialized_) {
-        LOGI("C3DRecorder already initialized, ignoring.");
+    // An in-progress session is never clobbered by a stray re-initialize.
+    if (initialized_ && !finalized_) {
+        LOGI("C3DRecorder already recording, ignoring re-initialize.");
         return true;
+    }
+    // A finalized session must not block the next one: without this the old
+    // finalized_ flag made every later C3DrecordFrame a no-op (Unity play mode
+    // and Unreal PIE reuse the process, so only the first session got a file).
+    if (finalized_) {
+        LOGI("C3DRecorder: previous session finalized, starting a new one.");
+        finalized_ = false;
+        frames_.clear();
     }
 
     if (resolver == nullptr) {
@@ -698,5 +707,17 @@ void C3DRecorder::writeC3D() {
 
     // Last, write the full c3d file to disk
     c3d.write(filePath_);
-    LOGI("C3DRecorder: file written OK: '%s'", filePath_.c_str());
+
+    // ezc3d::write() opens the fstream and never checks is_open(), so a missing or
+    // read-only output directory loses the session without any error. Confirm the
+    // artifact really exists before claiming success.
+    std::ifstream written(filePath_, std::ios::binary | std::ios::ate);
+    const long long bytes = written.is_open() ? static_cast<long long>(written.tellg()) : -1;
+    written.close();
+    if (bytes <= 0) {
+        LOGE("C3DRecorder: write produced no file at '%s' (directory missing or read-only?)",
+             filePath_.c_str());
+        return;
+    }
+    LOGI("C3DRecorder: file written OK (%lld bytes): '%s'", bytes, filePath_.c_str());
 }
