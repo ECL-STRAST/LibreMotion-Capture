@@ -30,6 +30,22 @@ static std::wstring toWide(const std::string& s) {
     return out;
 }
 
+void* WinHttpTransport::session() {
+    std::lock_guard<std::mutex> lk(sessionMtx_);
+    if (session_) return session_;
+    HINTERNET hSession = WinHttpOpen(L"telemetria/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) {
+        // Not cached: the next upload retries the open.
+        Log::err("WinHttpOpen failed err=%lu", GetLastError());
+        return nullptr;
+    }
+    // resolve / connect / send / receive timeouts (ms): connect 15 s, read 30 s (matches AyudanteHttp).
+    WinHttpSetTimeouts(hSession, 15000, 15000, 30000, 30000);
+    session_ = hSession;
+    return session_;
+}
+
 bool WinHttpTransport::postJson(const std::string& url,
                                 const std::string& body,
                                 const std::vector<std::pair<std::string, std::string>>& headers) {
@@ -59,21 +75,14 @@ bool WinHttpTransport::postJson(const std::string& url,
         return false;
     }
 
-    // 2) Session with system default proxy settings.
-    HINTERNET hSession = WinHttpOpen(L"telemetria/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                           WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if (!hSession) {
-        Log::err("WinHttpOpen failed err=%lu", GetLastError());
-        return false;
-    }
-    // resolve / connect / send / receive timeouts (ms): connect 15 s, read 30 s (matches AyudanteHttp).
-    WinHttpSetTimeouts(hSession, 15000, 15000, 30000, 30000);
+    // 2) Shared session (system default proxy settings), opened on first use.
+    HINTERNET hSession = static_cast<HINTERNET>(session());
+    if (!hSession) return false;
 
     // 3) Connect.
     HINTERNET hConnect = WinHttpConnect(hSession, uc.lpszHostName, uc.nPort, 0);
     if (!hConnect) {
         Log::err("WinHttpConnect failed err=%lu", GetLastError());
-        WinHttpCloseHandle(hSession);
         return false;
     }
 
@@ -88,7 +97,6 @@ bool WinHttpTransport::postJson(const std::string& url,
     if (!hRequest) {
         Log::err("WinHttpOpenRequest failed err=%lu", GetLastError());
         WinHttpCloseHandle(hConnect);
-        WinHttpCloseHandle(hSession);
         return false;
     }
 
@@ -127,10 +135,9 @@ bool WinHttpTransport::postJson(const std::string& url,
         }
     }
 
-    // 8) Close every handle on every exit path.
+    // 8) Close the per-request handles on every exit path; the session stays open.
     WinHttpCloseHandle(hRequest);
     WinHttpCloseHandle(hConnect);
-    WinHttpCloseHandle(hSession);
     return ok;
 }
 

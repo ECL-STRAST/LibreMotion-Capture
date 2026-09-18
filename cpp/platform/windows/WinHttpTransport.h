@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -22,6 +23,17 @@ public:
     bool postJson(const std::string& url,
                   const std::string& body,
                   const std::vector<std::pair<std::string, std::string>>& headers) override;
+
+private:
+    // One WinHTTP session for the process lifetime, opened on first use. WinHTTP
+    // pools keep-alive connections per session, so consecutive chunk uploads reuse
+    // the TCP/TLS connection instead of repeating the handshake. Stored as void*
+    // (HINTERNET) to keep this header free of <windows.h>. Deliberately never
+    // closed: the transport is a function-local static, destroyed at DLL unload
+    // under the loader lock, where WinHttpCloseHandle must not be called.
+    void* session();
+    std::mutex sessionMtx_;
+    void* session_ = nullptr;
 };
 
 } // namespace lmc
