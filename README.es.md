@@ -23,6 +23,13 @@ JSON, el modelo de marcadores C3D, los flags de funcionalidad y las llamadas de 
   verificacion y esquema), junto con `Unity_Implementation/README_Unity_Windows.md` y
   `Unreal_Implementation/README_Unreal_Windows.md`.
 
+> [!WARNING]
+> **Windows: usa rutas de carpeta solo ASCII.** La carpeta del proyecto/instalacion donde se
+> lee `initialConfig.json` y se escribe el `.c3d` (Unity: `Application.dataPath`; Unreal:
+> `<Proyecto>/Saved/`) no puede contener tildes, enes ni otros caracteres no ASCII (p. ej.
+> `C:\Users\Martín\...`). Si los contiene, el config se ignora sin avisar y no se genera
+> ningun `.c3d`. Ver [docs/steamvr-windows.md §7](docs/steamvr-windows.md#7-behaviour-notes).
+
 Los comandos de compilacion nativa de cada destino estan en **[cpp/README-build.md](cpp/README-build.md)**.
 
 ---

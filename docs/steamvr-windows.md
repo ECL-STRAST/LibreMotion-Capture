@@ -203,6 +203,16 @@ Leave `handTracking=false` (the default) to capture HMD + controllers only.
   writing and logs `write produced no file at '...' (directory missing or read-only?)`
   instead of claiming success. Prefer a writable `baseDir` (see §3 — `Application.dataPath`
   under `Program Files` is typically not writable).
+- **Windows: `baseDir` must be a plain-ASCII path.** The native library opens
+  `initialConfig.json` and the `.c3d` through narrow `char*` file APIs (its own and
+  `ezc3d`'s), which Windows interprets in the system ANSI code page, not UTF-8. Unreal
+  passes `baseDir` as UTF-8, so *any* non-ASCII character breaks it; Unity passes it as
+  ANSI, which only works for characters that exist in the machine's code page. Either way
+  a folder such as `C:\Users\Martín\...` or `D:\Captures\Sesión 1\` fails **silently**: the
+  config falls back to defaults (uploads disabled) and the C3D write logs
+  `write produced no file at '...'`. Keep the project/install folder and `baseDir` ASCII
+  only (on Unreal that includes the project path, since `baseDir` is `Saved/`). Android is
+  not affected.
 - **Proxy resolution differs per platform.** Android goes through the JVM/Java URL stack,
   which honours the system/IE proxy configuration; Windows uses
   `WINHTTP_ACCESS_TYPE_DEFAULT_PROXY`, which reads the WinHTTP machine configuration

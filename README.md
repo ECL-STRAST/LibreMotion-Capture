@@ -23,6 +23,13 @@ format, C3D marker model, feature flags and lifecycle calls:
   verification and the schema, plus `Unity_Implementation/README_Unity_Windows.md` and
   `Unreal_Implementation/README_Unreal_Windows.md`.
 
+> [!WARNING]
+> **Windows: use ASCII-only folder paths.** The project/install folder where
+> `initialConfig.json` is read and the `.c3d` is written (Unity: `Application.dataPath`;
+> Unreal: `<Project>/Saved/`) must not contain accents or other non-ASCII characters (e.g.
+> `C:\Users\Martín\...`). Otherwise the config is silently ignored and no `.c3d` file is
+> produced. See [docs/steamvr-windows.md §7](docs/steamvr-windows.md#7-behaviour-notes).
+
 Native build commands for every target live in **[cpp/README-build.md](cpp/README-build.md)**.
 
 ---
