@@ -8,10 +8,10 @@
 #include <condition_variable>
 #include <thread>
 
-// Bit masks used for controller button states. (see VRFrameDataPlain in VRTypes.h)
+// Bit masks used for controller button states. The full set of bits, including the
+// stick-press bit (0x4) which is not serialized, is documented on ControllerStatePlain.
 static constexpr unsigned BTN_PRIMARY   = 0x1u; // A/X
 static constexpr unsigned BTN_SECONDARY = 0x2u; // B/Y
-static constexpr unsigned BTN_JOYSTICK  = 0x4u; // Stick press
 
 GestorTelemetria::GestorTelemetria() {}
 // Destructor, is a safety fallback in case shutdown() was not called explicitly.

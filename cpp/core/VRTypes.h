@@ -13,7 +13,7 @@ struct VRPosePlain {
 // Per-controller state (left or right).
 struct ControllerStatePlain {
     VRPosePlain pose; //pose in tracking space
-    unsigned int buttons; //button bitmask
+    unsigned int buttons; //button bitmask: 0x1 primary (A/X), 0x2 secondary (B/Y), 0x4 stick press
     float trigger; //analog trigger value from 0 to 1
     float grip; //analog grip value from 0 to 1
     // Analog stick
