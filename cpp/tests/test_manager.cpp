@@ -16,6 +16,7 @@ TEST(LogDispatch, RoutesToInstalledSink) {
 #include "MockPlatform.h"
 #include "config/ConfigParser.h"
 #include <memory>
+#include <limits>
 using namespace lmc;
 
 static VRFrameDataPlain makeFrame(double t) {
@@ -106,4 +107,48 @@ TEST(Manager, DropsOldestChunksWhenUploadsFallBehind) {
             if (http.posts[p].body.find("\"timestamp\":" + std::to_string(t)) != std::string::npos) found = true;
         EXPECT_TRUE(found) << "chunk " << t << " should have been uploaded";
     }
+}
+
+TEST(Manager, FrameWithoutHandsIsValidJson) {
+    MockHttp http;
+    UploaderConfig cfg; configSetDefaults(cfg); cfg.framesPerFile = 2; cfg.handTracking = false;
+    GestorTelemetria m; ASSERT_TRUE(m.initialize(cfg, &http));
+    m.recordFrame(makeFrame(1));
+    m.recordFrame(makeFrame(2));
+    m.shutdown();
+    ASSERT_EQ(http.posts.size(), 1u);
+    const std::string& body = http.posts[0].body;
+    // Each frame object must close right after the controllers block, with no
+    // dangling separator before the closing brace.
+    EXPECT_EQ(std::string::npos, body.find(",}")) << body;
+    EXPECT_NE(std::string::npos, body.find("\"tracked\":false,\"orientation\":[0,0,0,0],\"position\":[0,0,0]}}},{")) << body;
+    EXPECT_EQ(body.substr(body.size() - 4), "}}}]") << body;
+}
+
+TEST(Manager, TimestampKeepsSubFramePrecisionInLongSessions) {
+    MockHttp http;
+    UploaderConfig cfg; configSetDefaults(cfg); cfg.framesPerFile = 1;
+    GestorTelemetria m; ASSERT_TRUE(m.initialize(cfg, &http));
+    m.recordFrame(makeFrame(3600.0 + 1.0 / 90.0));   // one hour in, at 90 Hz
+    m.shutdown();
+    ASSERT_EQ(http.posts.size(), 1u);
+    EXPECT_NE(std::string::npos, http.posts[0].body.find("\"timestamp\":3600.01111111111,")) << http.posts[0].body;
+}
+
+TEST(Manager, EscapesStringsAndWritesNonFiniteNumbersAsNull) {
+    MockHttp http;
+    UploaderConfig cfg; configSetDefaults(cfg); cfg.framesPerFile = 1;
+    cfg.sessionId = "a\"b\\c";
+    cfg.deviceInfo = "Quest\n3";
+    GestorTelemetria m; ASSERT_TRUE(m.initialize(cfg, &http));
+    VRFrameDataPlain f = makeFrame(0);
+    f.hmdPose.position[0] = std::numeric_limits<float>::quiet_NaN();
+    f.hmdPose.position[1] = std::numeric_limits<float>::infinity();
+    m.recordFrame(f);
+    m.shutdown();
+    ASSERT_EQ(http.posts.size(), 1u);
+    const std::string& body = http.posts[0].body;
+    EXPECT_NE(std::string::npos, body.find(R"("session_id":"a\"b\\c")")) << body;
+    EXPECT_NE(std::string::npos, body.find(R"("device_info":"Quest\n3")")) << body;
+    EXPECT_NE(std::string::npos, body.find(R"("position":[null,null,0])")) << body;
 }

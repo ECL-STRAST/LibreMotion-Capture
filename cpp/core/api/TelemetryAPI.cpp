@@ -65,7 +65,7 @@ int telemetry_initialize(const TelemetryConfigPlain* cfg) {
     // init (instead of skipping on every upload). C3D recording and the rest of
     // the pipeline keep working with a null transport.
     lmc::IHttpTransport* transport = pb.http;
-    if (ucfg.endpointUrl.empty() || ucfg.apiKey.empty()) {
+    if (!lmc::configUploadsEnabled(ucfg)) {
         lmc::Log::err("Missing supabase config (endpoint/apiKey); uploads disabled");
         transport = nullptr;
     }

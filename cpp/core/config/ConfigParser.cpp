@@ -118,4 +118,11 @@ unsigned configFeatureFlagsBitmask(const UploaderConfig& c) {
     if (c.joystick)       m |= 1u << 5;
     return m;
 }
+bool configUploadsEnabled(const UploaderConfig& c) {
+    if (c.endpointUrl.empty() || c.apiKey.empty()) return false;
+    // Without an initialConfig.json the placeholders are still in place. Treating
+    // them as a real target made every chunk try http://localhost:1414 and log
+    // "Upload FAILED" for the whole session instead of disabling uploads once.
+    return c.endpointUrl != kDefaultEndpoint && c.apiKey != kDefaultApiKey;
+}
 } // namespace lmc

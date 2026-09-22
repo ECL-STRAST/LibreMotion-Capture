@@ -120,7 +120,7 @@ their defaults. A full example is at the repository root (`initialConfig.json`).
 | Key | Type | Default if absent | Notes |
 | --- | --- | --- | --- |
 | `endpoint` | string | `http://localhost:1414` | REST endpoint that receives the JSON chunks (Supabase/PostgREST style). |
-| `apiKey` | string | `non_existant` | Sent as the API key header. If `endpoint` or `apiKey` ends up empty, uploads are disabled at init (C3D + buffering keep working). |
+| `apiKey` | string | `non_existant` | Sent as the API key header. If `endpoint` or `apiKey` ends up empty or still holds its placeholder default (no config file, or the key missing from it), uploads are disabled at init (C3D + buffering keep working). |
 | `framesPerFile` | int | `200` | Frames buffered per JSON chunk; must be `> 0`. |
 | `frameRate` | int | `60` | Returned to the engine (`rc`). Accepted range **[1, 240]**; out of range falls back to `60`. |
 | `handTracking` | bool | `false` | Enables hand-joint capture (optional at runtime, see §6). |
@@ -180,7 +180,7 @@ Leave `handTracking=false` (the default) to capture HMD + controllers only.
   (`telemetry_set_java_context`) as before to enable uploads on Android.
 - **Frame rate.** Default `60`; overridden only by a readable config file, and clamped to
   `[1, 240]` (out-of-range → `60`).
-- **Empty `endpoint`/`apiKey`.** Uploads are disabled once at init (logged as
+- **Empty or placeholder `endpoint`/`apiKey`.** Uploads are disabled once at init (logged as
   `Missing supabase config (endpoint/apiKey); uploads disabled`); buffering and C3D writing
   continue.
 - **`telemetry_set_java_context` is Android-only** — it is not present in the Windows DLL

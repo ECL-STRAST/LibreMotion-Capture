@@ -77,6 +77,9 @@ bool AndroidHttpTransport::postJson(const std::string& url,
     jstring jName = env->NewStringUTF("io.github.migueldulu.telemetria.AyudanteHttp");
     jclass helperCls = (jclass)env->CallObjectMethod(loaderObj, loadClass, jName);
     env->DeleteLocalRef(jName);
+    // loadClass throws ClassNotFoundException when the AAR is missing; clear it so
+    // no further JNI call runs with an exception pending.
+    logJavaException(env, "AndroidHttpTransport.loadClass");
     if (!helperCls) {
         if (needDetach) vm_->DetachCurrentThread();
         LOGE("AyudanteHttp class not found");
@@ -135,7 +138,12 @@ bool AndroidHttpTransport::postJson(const std::string& url,
         env->DeleteLocalRef(jResp);
         LOGI("HTTP response size: %d", (int)len);
         LOGI("HTTP response preview: %.200s", resp.c_str());
-        if (resp.find("HTTP_STATUS:") != std::string::npos) {
+        // AyudanteHttp reports a non-2xx status with a trailing HTTP_STATUS:<code>
+        // line, but an exception (no network, DNS, timeout) comes back as its
+        // errorBytes() object {"error":"...","msg":"..."} with no marker. Both are
+        // failures; the second one used to be logged as a successful upload.
+        if (resp.find("HTTP_STATUS:") != std::string::npos ||
+            resp.rfind("{\"error\":\"", 0) == 0) {
             LOGE("Server returned error marker");
             if (needDetach) vm_->DetachCurrentThread();
             return false;

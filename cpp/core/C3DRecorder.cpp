@@ -276,6 +276,20 @@ void calculateWristWidthFromJoint(const JointSamplePlain& joint, Vector3& pointR
     };
 }
 
+// Joint slot (0..25, kHandJointNames order) of a sample. Engines send the XR joint
+// index in idIndex; the array position only matches it when every joint of the
+// layout is present, so the id is what decides the marker/channel. -1 = unusable.
+static int jointSlot(const JointSamplePlain& s) {
+    return (s.idIndex >= 0 && s.idIndex < 26) ? s.idIndex : -1;
+}
+
+// Wrist sample of a hand (slot 0), or nullptr when the hand did not report it.
+static const JointSamplePlain* findWrist(const JointSamplePlain* joints, int count) {
+    for (int j = 0; j < count && j < 30; ++j)
+        if (jointSlot(joints[j]) == 0) return &joints[j];
+    return nullptr;
+}
+
 // Convert from meters to millimeters (could be left as it is, but mm is more common with c3d files)
 inline void metersToMillimeters(float& x, float& y, float& z) {
     const float k = 1000.0f;
@@ -492,8 +506,10 @@ void C3DRecorder::writeC3D() {
             }
 
             // Hands: joints L
-            for (int j = 0; j < f.leftHandJointCount && j < 26; ++j) {
+            for (int j = 0; j < f.leftHandJointCount && j < 30; ++j) {
                 const auto& s = f.leftHandJoints[j];
+                const int slot = jointSlot(s);
+                if (slot < 0) continue;
                 float x = s.px;
                 float y = s.py;
                 float z = s.pz;
@@ -508,13 +524,15 @@ void C3DRecorder::writeC3D() {
                     p.y(y);
                     p.z(z);
                     p.residual(s.hasPose ? 0.0 : -1.0);
-                    points.point(p, static_cast<int>(IDX_L_HAND_BASE + j));
+                    points.point(p, static_cast<int>(IDX_L_HAND_BASE + slot));
                 }
             }
 
             // Hands: joints R
-            for (int j = 0; j < f.rightHandJointCount && j < 26; ++j) {
+            for (int j = 0; j < f.rightHandJointCount && j < 30; ++j) {
                 const auto& s = f.rightHandJoints[j];
+                const int slot = jointSlot(s);
+                if (slot < 0) continue;
                 float x = s.px;
                 float y = s.py;
                 float z = s.pz;
@@ -529,14 +547,14 @@ void C3DRecorder::writeC3D() {
                     p.y(y);
                     p.z(z);
                     p.residual(s.hasPose ? 0.0 : -1.0);
-                    points.point(p, static_cast<int>(IDX_R_HAND_BASE + j));
+                    points.point(p, static_cast<int>(IDX_R_HAND_BASE + slot));
                 }
             }
 
             // Extra wrist points LWRA/LWRB/RWRA/RWRB
             // Left hand: joint 0 = WRIST
-            if (f.leftHandJointCount > 0) {
-                const auto& wrist = f.leftHandJoints[0];
+            if (const JointSamplePlain* wristPtr = findWrist(f.leftHandJoints, f.leftHandJointCount)) {
+                const auto& wrist = *wristPtr;
                 if (wrist.hasPose) {
                     Vector3 wra, wrb;
                     calculateWristWidthFromJoint(wrist, wra, wrb, 0.06f);
@@ -567,8 +585,8 @@ void C3DRecorder::writeC3D() {
             }
 
             // Right hand
-            if (f.rightHandJointCount > 0) {
-                const auto& wrist = f.rightHandJoints[0];
+            if (const JointSamplePlain* wristPtr = findWrist(f.rightHandJoints, f.rightHandJointCount)) {
+                const auto& wrist = *wristPtr;
                 if (wrist.hasPose) {
                     Vector3 wra, wrb;
                     calculateWristWidthFromJoint(wrist, wra, wrb, 0.06f);
@@ -618,76 +636,51 @@ void C3DRecorder::writeC3D() {
                 subframe.channel(ch, idx);
             };
 
-            size_t idx = 0;
+            // Every channel starts at 0 and is then written at the fixed position its
+            // label has in buildAnalogNames(): HMD, then 26 slots per hand. Writing
+            // sequentially instead shifted every later column whenever a hand was
+            // missing or a controller quaternion was present (e.g. the left
+            // controller ended up under LWRT_q*).
+            for (size_t c = 0; c < nbAnalogs; ++c) setChan(c, 0.0f);
+
+            auto setQuat = [&](size_t firstIdx, float qx, float qy, float qz, float qw) {
+                if (firstIdx + 3 >= nbAnalogs) return;
+                openxrToGaitAxesQuat(qx, qy, qz, qw);
+                setChan(firstIdx + 0, qx);
+                setChan(firstIdx + 1, qy);
+                setChan(firstIdx + 2, qz);
+                setChan(firstIdx + 3, qw);
+            };
+            const size_t ANA_HMD    = 0;
+            const size_t ANA_L_BASE = 4;               // 26 joints x 4
+            const size_t ANA_R_BASE = ANA_L_BASE + 26 * 4;
+            const size_t FIN_SLOT   = 7;               // kHandJointNames[7] = "FIN"
 
             // HMD quaternion
-            {
-                float qx = f.hmdPose.rotation[0];
-                float qy = f.hmdPose.rotation[1];
-                float qz = f.hmdPose.rotation[2];
-                float qw = f.hmdPose.rotation[3];
+            setQuat(ANA_HMD, f.hmdPose.rotation[0], f.hmdPose.rotation[1],
+                    f.hmdPose.rotation[2], f.hmdPose.rotation[3]);
 
-                openxrToGaitAxesQuat(qx, qy, qz, qw);
-
-                setChan(idx++, qx);
-                setChan(idx++, qy);
-                setChan(idx++, qz);
-                setChan(idx++, qw);
+            // Controller quaternions go to the FIN slot, the same marker that holds the
+            // controller position in the point data.
+            if (f.leftCtrl.isActive && f.leftHandJointCount == 0) {
+                setQuat(ANA_L_BASE + FIN_SLOT * 4, f.leftCtrl.pose.rotation[0], f.leftCtrl.pose.rotation[1],
+                        f.leftCtrl.pose.rotation[2], f.leftCtrl.pose.rotation[3]);
+            }
+            if (f.rightCtrl.isActive && f.rightHandJointCount == 0) {
+                setQuat(ANA_R_BASE + FIN_SLOT * 4, f.rightCtrl.pose.rotation[0], f.rightCtrl.pose.rotation[1],
+                        f.rightCtrl.pose.rotation[2], f.rightCtrl.pose.rotation[3]);
             }
 
-            // L_CTRL quaternion
-            if (f.leftCtrl.isActive && f.leftHandJointCount==0){
-                float qx = f.leftCtrl.pose.rotation[0];
-                float qy = f.leftCtrl.pose.rotation[1];
-                float qz = f.leftCtrl.pose.rotation[2];
-                float qw = f.leftCtrl.pose.rotation[3];
-
-                openxrToGaitAxesQuat(qx, qy, qz, qw);
-
-                setChan(idx++, qx);
-                setChan(idx++, qy);
-                setChan(idx++, qz);
-                setChan(idx++, qw);
-            }
-
-            // R_CTRL quaternion
-            if (f.rightCtrl.isActive && f.rightHandJointCount==0){
-                float qx = f.rightCtrl.pose.rotation[0];
-                float qy = f.rightCtrl.pose.rotation[1];
-                float qz = f.rightCtrl.pose.rotation[2];
-                float qw = f.rightCtrl.pose.rotation[3];
-
-                openxrToGaitAxesQuat(qx, qy, qz, qw);
-
-                setChan(idx++, qx);
-                setChan(idx++, qy);
-                setChan(idx++, qz);
-                setChan(idx++, qw);
-            }
-
-            // L_Joints quaternion
-            for (int j = 0; j < f.leftHandJointCount && j < 26; ++j) {
+            // Joint quaternions, placed by joint id
+            for (int j = 0; j < f.leftHandJointCount && j < 30; ++j) {
                 const auto& s = f.leftHandJoints[j];
-                float qx = s.qx, qy = s.qy, qz = s.qz, qw = s.qw;
-                openxrToGaitAxesQuat(qx, qy, qz, qw);
-                setChan(idx++, qx);
-                setChan(idx++, qy);
-                setChan(idx++, qz);
-                setChan(idx++, qw);
+                const int slot = jointSlot(s);
+                if (slot >= 0) setQuat(ANA_L_BASE + (size_t)slot * 4, s.qx, s.qy, s.qz, s.qw);
             }
-            // R_Joints quaternion
-            for (int j = 0; j < f.rightHandJointCount && j < 26; ++j) {
+            for (int j = 0; j < f.rightHandJointCount && j < 30; ++j) {
                 const auto& s = f.rightHandJoints[j];
-                float qx = s.qx, qy = s.qy, qz = s.qz, qw = s.qw;
-                openxrToGaitAxesQuat(qx, qy, qz, qw);
-                setChan(idx++, qx);
-                setChan(idx++, qy);
-                setChan(idx++, qz);
-                setChan(idx++, qw);
-            }
-
-            while (idx + 1 < nbAnalogs) { // we leave the last for Realtime
-                setChan(idx++, 0.0f);
+                const int slot = jointSlot(s);
+                if (slot >= 0) setQuat(ANA_R_BASE + (size_t)slot * 4, s.qx, s.qy, s.qz, s.qw);
             }
 
             // Extra channel for real time

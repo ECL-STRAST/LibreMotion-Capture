@@ -7,6 +7,9 @@
 #include <deque>
 #include <condition_variable>
 #include <thread>
+#include <cmath>
+#include <cstdio>
+#include <iomanip>
 
 // Bit masks used for controller button states. The full set of bits, including the
 // stick-press bit (0x4) which is not serialized, is documented on ControllerStatePlain.
@@ -128,119 +131,127 @@ void GestorTelemetria::shutdown() {
     if (worker_.joinable()) worker_.join();
 }
 
+// Numbers go through JsonNum so a NaN/Inf coming from the engine (e.g. an
+// uninitialised pose) is written as null instead of "nan"/"inf", which would make
+// the whole chunk unparseable and the server reject it.
+struct JsonNum { double v; };
+static std::ostream& operator<<(std::ostream& os, JsonNum n) {
+    if (std::isfinite(n.v)) os << n.v; else os << "null";
+    return os;
+}
+
+// Session id and device info come from the engine (product name, device model),
+// so quotes, backslashes and control characters have to be escaped.
+static void writeJsonString(std::ostream& os, const std::string& s) {
+    os << '"';
+    for (unsigned char c : s) {
+        switch (c) {
+            case '"':  os << "\\\""; break;
+            case '\\': os << "\\\\"; break;
+            case '\n': os << "\\n";  break;
+            case '\r': os << "\\r";  break;
+            case '\t': os << "\\t";  break;
+            default:
+                if (c < 0x20) {
+                    char buf[8];
+                    std::snprintf(buf, sizeof(buf), "\\u%04x", c);
+                    os << buf;
+                } else {
+                    os << static_cast<char>(c);
+                }
+        }
+    }
+    os << '"';
+}
+
+static void writeController(std::ostream& os, const ControllerStatePlain& c, const UploaderConfig& cfgFlags) {
+    os << "{";
+    os << "\"tracked\":" << (c.isActive ? "true" : "false") << ",";
+    os << "\"orientation\":[" << JsonNum{c.pose.rotation[0]} << "," << JsonNum{c.pose.rotation[1]} << ","
+       << JsonNum{c.pose.rotation[2]} << "," << JsonNum{c.pose.rotation[3]} << "],";
+    os << "\"position\":[" << JsonNum{c.pose.position[0]} << "," << JsonNum{c.pose.position[1]} << ","
+       << JsonNum{c.pose.position[2]} << "]";
+
+    // Conditional fields, only when enabled in initialConfig.json
+    if (cfgFlags.trigger) {
+        os << ",\"trigger\":" << JsonNum{c.trigger};
+    }
+    if (cfgFlags.grip) {
+        os << ",\"grip\":" << JsonNum{c.grip};
+    }
+    if (cfgFlags.primaryButton) {
+        os << ",\"primary\":" << (((c.buttons & BTN_PRIMARY) != 0u) ? "true" : "false");
+    }
+    if (cfgFlags.secondaryButton) {
+        os << ",\"secondary\":" << (((c.buttons & BTN_SECONDARY) != 0u) ? "true" : "false");
+    }
+    if (cfgFlags.joystick) {
+        os << ",\"joystick_x\":" << JsonNum{c.stickX};
+        os << ",\"joystick_y\":" << JsonNum{c.stickY};
+    }
+    os << "}";
+}
+
+static void writeHand(std::ostream& os, const JointSamplePlain* joints, int count) {
+    os << "{";
+    os << "\"joint_count\":" << count << ",";
+    os << "\"joints\":[";
+    for (int j = 0; j < count && j < 30; ++j) {
+        const auto& s = joints[j];
+        if (j) os << ",";
+        os << "{"
+           << "\"id\":" << s.idIndex
+           << ",\"state\":" << s.state
+           << ",\"orientation\":[" << JsonNum{s.qx} << "," << JsonNum{s.qy} << "," << JsonNum{s.qz} << "," << JsonNum{s.qw} << "]"
+           << ",\"position\":[" << JsonNum{s.px} << "," << JsonNum{s.py} << "," << JsonNum{s.pz} << "]"
+           << ",\"has_pose\":" << (s.hasPose ? "true":"false")
+           << "}";
+    }
+    os << "]";
+    os << "}";
+}
+
 // Serialize a sequence of frames into the flat JSON format.
 // The resulting JSON is an array of frame objects, each with head_pose, controllers (left/right) or optional hand joint data.
 static std::string toJsonFlat(const std::vector<VRFrameDataPlain>& frames, const std::string& sessionId, const std::string& deviceInfo, const UploaderConfig& cfgFlags) {
     std::ostringstream os;
+    // The stream's default 6 significant digits are fine for poses (1e-5 m) but not
+    // for the timestamp: after 1000 s it would be rounded to 10 ms, less than one
+    // frame at 72-90 Hz, so consecutive frames would share the same timestamp.
+    const std::streamsize poseDigits = os.precision();
     os << "[";
     for (size_t i = 0; i < frames.size(); ++i) {
         const auto& f = frames[i];
         os << "{";
-        os << "\"session_id\":\"" << sessionId << "\",";
-        os << "\"timestamp\":" << f.timestampSec << ",";
-        os << "\"device_info\":\"" << deviceInfo << "\",";
+        os << "\"session_id\":"; writeJsonString(os, sessionId); os << ",";
+        os << std::setprecision(15) << "\"timestamp\":" << JsonNum{f.timestampSec} << std::setprecision(poseDigits) << ",";
+        os << "\"device_info\":"; writeJsonString(os, deviceInfo); os << ",";
 
         // Estructura para head pose
         os << "\"head_pose\":{";
-        os << "\"orientation\":[" << f.hmdPose.rotation[0] << "," << f.hmdPose.rotation[1] << "," << f.hmdPose.rotation[2] << "," << f.hmdPose.rotation[3] << "],";
-        os << "\"position\":[" << f.hmdPose.position[0] << "," << f.hmdPose.position[1] << "," << f.hmdPose.position[2] << "]";
+        os << "\"orientation\":[" << JsonNum{f.hmdPose.rotation[0]} << "," << JsonNum{f.hmdPose.rotation[1]} << ","
+           << JsonNum{f.hmdPose.rotation[2]} << "," << JsonNum{f.hmdPose.rotation[3]} << "],";
+        os << "\"position\":[" << JsonNum{f.hmdPose.position[0]} << "," << JsonNum{f.hmdPose.position[1]} << ","
+           << JsonNum{f.hmdPose.position[2]} << "]";
         os << "},";
 
         // Estructura para controladores
         os << "\"controllers\":{";
-        os << "\"left\":{";
-        os << "\"tracked\":" << (f.leftCtrl.isActive ? "true" : "false") << ",";
-        os << "\"orientation\":[" << f.leftCtrl.pose.rotation[0] << "," << f.leftCtrl.pose.rotation[1] << "," << f.leftCtrl.pose.rotation[2] << "," << f.leftCtrl.pose.rotation[3] << "],";
-        os << "\"position\":[" << f.leftCtrl.pose.position[0] << "," << f.leftCtrl.pose.position[1] << "," << f.leftCtrl.pose.position[2] << "]";
+        os << "\"left\":";
+        writeController(os, f.leftCtrl, cfgFlags);
+        os << ",\"right\":";
+        writeController(os, f.rightCtrl, cfgFlags);
+        os << "}";  // cierra controllers
 
-        // Campos condicionales del controlador izquierdo
-        if (cfgFlags.trigger) {
-            os << ",\"trigger\":" << f.leftCtrl.trigger;
-        }
-        if (cfgFlags.grip) {
-            os << ",\"grip\":" << f.leftCtrl.grip;
-        }
-        if (cfgFlags.primaryButton) {
-            bool lp = (f.leftCtrl.buttons & BTN_PRIMARY) != 0u;
-            os << ",\"primary\":" << (lp ? "true":"false");
-        }
-        if (cfgFlags.secondaryButton) {
-            bool ls = (f.leftCtrl.buttons & BTN_SECONDARY) != 0u;
-            os << ",\"secondary\":" << (ls ? "true":"false");
-        }
-        if (cfgFlags.joystick) {
-            os << ",\"joystick_x\":" << f.leftCtrl.stickX;
-            os << ",\"joystick_y\":" << f.leftCtrl.stickY;
-        }
-        os << "},";  // cierra left
-
-        // Controlador derecho
-        os << "\"right\":{";
-        os << "\"tracked\":" << (f.rightCtrl.isActive ? "true" : "false") << ",";
-        os << "\"orientation\":[" << f.rightCtrl.pose.rotation[0] << "," << f.rightCtrl.pose.rotation[1] << "," << f.rightCtrl.pose.rotation[2] << "," << f.rightCtrl.pose.rotation[3] << "],";
-        os << "\"position\":[" << f.rightCtrl.pose.position[0] << "," << f.rightCtrl.pose.position[1] << "," << f.rightCtrl.pose.position[2] << "]";
-
-        // Campos condicionales del controlador derecho
-        if (cfgFlags.trigger) {
-            os << ",\"trigger\":" << f.rightCtrl.trigger;
-        }
-        if (cfgFlags.grip) {
-            os << ",\"grip\":" << f.rightCtrl.grip;
-        }
-        if (cfgFlags.primaryButton) {
-            bool rp = (f.rightCtrl.buttons & BTN_PRIMARY) != 0u;
-            os << ",\"primary\":" << (rp ? "true":"false");
-        }
-        if (cfgFlags.secondaryButton) {
-            bool rs = (f.rightCtrl.buttons & BTN_SECONDARY) != 0u;
-            os << ",\"secondary\":" << (rs ? "true":"false");
-        }
-        if (cfgFlags.joystick) {
-            os << ",\"joystick_x\":" << f.rightCtrl.stickX;
-            os << ",\"joystick_y\":" << f.rightCtrl.stickY;
-        }
-        os << "}";  // cierra right
-        os << "},";  // cierra controllers
-
-        // Joints de las manos
+        // Joints de las manos. The separator is written here, not after the
+        // controllers block, so a frame without hands does not end in ",}".
         if (cfgFlags.handTracking) {
-            os << "\"hands\":{";
-            // Left joints
-            os << "\"left\":{";
-            os << "\"joint_count\":" << f.leftHandJointCount << ",";
-            os << "\"joints\":[";
-            for (int j = 0; j < f.leftHandJointCount && j < 30; ++j) {
-                const auto& s = f.leftHandJoints[j];
-                if (j) os << ",";
-                os << "{"
-                   << "\"id\":" << s.idIndex
-                   << ",\"state\":" << s.state
-                   << ",\"orientation\":[" << s.qx << "," << s.qy << "," << s.qz << "," << s.qw << "]"
-                   << ",\"position\":[" << s.px << "," << s.py << "," << s.pz << "]"
-                   << ",\"has_pose\":" << (s.hasPose ? "true":"false")
-                   << "}";
-            }
-            os << "]";
-            os << "},";
-
-            // Right joints
-            os << "\"right\":{";
-            os << "\"joint_count\":" << f.rightHandJointCount << ",";
-            os << "\"joints\":[";
-            for (int j = 0; j < f.rightHandJointCount && j < 30; ++j) {
-                const auto& s = f.rightHandJoints[j];
-                if (j) os << ",";
-                os << "{"
-                   << "\"id\":" << s.idIndex
-                   << ",\"state\":" << s.state
-                   << ",\"orientation\":[" << s.qx << "," << s.qy << "," << s.qz << "," << s.qw << "]"
-                   << ",\"position\":[" << s.px << "," << s.py << "," << s.pz << "]"
-                   << ",\"has_pose\":" << (s.hasPose ? "true":"false")
-                   << "}";
-            }
-            os << "]";
-            os << "}"; // cierra right
-            os << "}"; // cierra hand_joints
+            os << ",\"hands\":{";
+            os << "\"left\":";
+            writeHand(os, f.leftHandJoints, f.leftHandJointCount);
+            os << ",\"right\":";
+            writeHand(os, f.rightHandJoints, f.rightHandJointCount);
+            os << "}"; // cierra hands
         }
 
         os << "}"; // cierra el objeto frame completo
@@ -249,6 +260,7 @@ static std::string toJsonFlat(const std::vector<VRFrameDataPlain>& frames, const
     os << "]";
     return os.str();
 }
+
 
 void GestorTelemetria::serializeAndSend(const std::vector<VRFrameDataPlain>& chunk) {
     if (!transport_) return;

@@ -33,3 +33,14 @@ TEST(ConfigParser, FrameRateClampAndFallback) {
     EXPECT_EQ(configParseFrameRate(R"({"frameRate":900})", 60), 60);
     EXPECT_EQ(configParseFrameRate(R"({})", 60), 60);
 }
+
+TEST(ConfigParser, UploadsDisabledWithoutARealTarget) {
+    UploaderConfig cfg; configSetDefaults(cfg);
+    EXPECT_FALSE(configUploadsEnabled(cfg));          // placeholders only (no config file)
+    configParseJson(R"({"endpoint":"https://x/tb"})", cfg);
+    EXPECT_FALSE(configUploadsEnabled(cfg));          // key still the placeholder
+    configParseJson(R"({"apiKey":"K"})", cfg);
+    EXPECT_TRUE(configUploadsEnabled(cfg));
+    cfg.endpointUrl.clear();
+    EXPECT_FALSE(configUploadsEnabled(cfg));
+}

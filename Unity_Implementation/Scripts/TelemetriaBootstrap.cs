@@ -223,8 +223,10 @@ public class TelemetriaBootstrap : MonoBehaviour
             {
                 // Thumbstick click suele venir como primary2DAxisClick
                 if (left.TryGetFeatureValue(CommonUsages.primary2DAxis, out Vector2 laxis))
+                {
                     frame.leftCtrl.stickX = laxis.x;
                     frame.leftCtrl.stickY = laxis.y;
+                }
             }
         }
         else
