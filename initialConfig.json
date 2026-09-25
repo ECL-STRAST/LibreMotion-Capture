@@ -8,5 +8,6 @@
   "secondaryButton":true,
   "grip":true,
   "trigger":true,
-  "joystick":true
+  "joystick":true,
+  "saveJsonLocally":false
 }

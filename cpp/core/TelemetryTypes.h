@@ -18,6 +18,11 @@ struct UploaderConfig {
     bool grip = false;
     bool trigger = false;
     bool joystick = false;
+    // Also write every JSON chunk to disk (initialConfig.json "saveJsonLocally").
+    bool saveJsonLocally = false;
+    // Set by telemetry_initialize when saveJsonLocally is on: the session's C3D path
+    // without ".c3d". Chunk n is written to <prefix>_chunk<nnnn>.json. Empty = off.
+    std::string jsonOutputPrefix;
 };
 
 // Plain configuration struct sent from Unity/Unreal to the C API.

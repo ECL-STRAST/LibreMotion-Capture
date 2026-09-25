@@ -152,3 +152,60 @@ TEST(Manager, EscapesStringsAndWritesNonFiniteNumbersAsNull) {
     EXPECT_NE(std::string::npos, body.find(R"("device_info":"Quest\n3")")) << body;
     EXPECT_NE(std::string::npos, body.find(R"("position":[null,null,0])")) << body;
 }
+
+TEST(Manager, SavesChunksLocallyWithUploadsDisabled) {
+    WinTempDir tmp;
+    UploaderConfig cfg; configSetDefaults(cfg); cfg.framesPerFile = 2;
+    cfg.jsonOutputPrefix = joinPath(tmp.dir(), "session_s1");
+    GestorTelemetria m; ASSERT_TRUE(m.initialize(cfg, nullptr));
+    for (int i = 0; i < 3; ++i) m.recordFrame(makeFrame(i));  // 1 full chunk + 1 flushed
+    m.shutdown();
+    std::string first, second;
+    ASSERT_TRUE(readFileToString(joinPath(tmp.dir(), "session_s1_chunk0001.json"), first));
+    ASSERT_TRUE(readFileToString(joinPath(tmp.dir(), "session_s1_chunk0002.json"), second));
+    EXPECT_EQ(0u, first.find(R"([{"session_id":"","timestamp":0,)"));
+    EXPECT_EQ(0u, second.find(R"([{"session_id":"","timestamp":2,)"));
+    EXPECT_EQ(']', first.back());
+    EXPECT_FALSE(fileExists(joinPath(tmp.dir(), "session_s1_chunk0003.json")));
+}
+
+TEST(Manager, LocalCopyMatchesUploadedBody) {
+    WinTempDir tmp;
+    MockHttp http;
+    UploaderConfig cfg; configSetDefaults(cfg); cfg.framesPerFile = 1;
+    cfg.jsonOutputPrefix = joinPath(tmp.dir(), "session_s1");
+    GestorTelemetria m; ASSERT_TRUE(m.initialize(cfg, &http));
+    m.recordFrame(makeFrame(5));
+    m.shutdown();
+    ASSERT_EQ(http.posts.size(), 1u);
+    std::string saved;
+    ASSERT_TRUE(readFileToString(joinPath(tmp.dir(), "session_s1_chunk0001.json"), saved));
+    EXPECT_EQ(saved, http.posts[0].body);
+}
+
+TEST(Manager, ChunkNumberingRestartsOnReinitialize) {
+    WinTempDir tmp;
+    UploaderConfig cfg; configSetDefaults(cfg); cfg.framesPerFile = 1;
+    cfg.jsonOutputPrefix = joinPath(tmp.dir(), "session_a");
+    GestorTelemetria m;
+    ASSERT_TRUE(m.initialize(cfg, nullptr));
+    m.recordFrame(makeFrame(1)); m.recordFrame(makeFrame(2));
+    m.shutdown();
+    cfg.jsonOutputPrefix = joinPath(tmp.dir(), "session_b");
+    ASSERT_TRUE(m.initialize(cfg, nullptr));
+    m.recordFrame(makeFrame(3));
+    m.shutdown();
+    EXPECT_TRUE(fileExists(joinPath(tmp.dir(), "session_a_chunk0002.json")));
+    EXPECT_TRUE(fileExists(joinPath(tmp.dir(), "session_b_chunk0001.json")));
+    EXPECT_FALSE(fileExists(joinPath(tmp.dir(), "session_b_chunk0002.json")));
+}
+
+TEST(Manager, ReportsLocalWriteFailure) {
+    ScopedCaptureLog log;
+    UploaderConfig cfg; configSetDefaults(cfg); cfg.framesPerFile = 1;
+    cfg.jsonOutputPrefix = "/nonexistent-dir-lmc/session_s1";
+    GestorTelemetria m; ASSERT_TRUE(m.initialize(cfg, nullptr));
+    m.recordFrame(makeFrame(1));
+    m.shutdown();
+    EXPECT_TRUE(log.sink()->errorMentions("Could not save chunk locally"));
+}

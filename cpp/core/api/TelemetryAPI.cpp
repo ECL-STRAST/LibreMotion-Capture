@@ -61,6 +61,22 @@ int telemetry_initialize(const TelemetryConfigPlain* cfg) {
                    ucfg.endpointUrl.c_str(), (int)ucfg.apiKey.size(), ucfg.framesPerFile,
                    ucfg.sessionId.c_str(), (int)ucfg.deviceInfo.size());
 
+    // Optional local copy of the JSON chunks, next to the session's C3D file.
+    if (ucfg.saveJsonLocally) {
+        std::string c3dPath;
+        if (pb.paths && pb.paths->c3dFilePath(ucfg.sessionId, c3dPath) && !c3dPath.empty()) {
+            const std::string ext = ".c3d";
+            if (c3dPath.size() > ext.size() &&
+                c3dPath.compare(c3dPath.size() - ext.size(), ext.size(), ext) == 0) {
+                c3dPath.resize(c3dPath.size() - ext.size());
+            }
+            ucfg.jsonOutputPrefix = c3dPath;
+            lmc::Log::info("saveJsonLocally: chunks go to '%s_chunk<n>.json'", c3dPath.c_str());
+        } else {
+            lmc::Log::err("saveJsonLocally: could not resolve an output path; local JSON disabled");
+        }
+    }
+
     // R10: if the Supabase endpoint/api key are missing, disable uploads once at
     // init (instead of skipping on every upload). C3D recording and the rest of
     // the pipeline keep working with a null transport.

@@ -64,6 +64,7 @@ bool GestorTelemetria::initialize(const UploaderConfig& cfg, lmc::IHttpTransport
         stopWorker_ = false;
         queue_.clear();
     }
+    chunkIndex_ = 0;
     // Launch the worker thread which will run workerLoop().
     worker_ = std::thread(&GestorTelemetria::workerLoop, this);
     return true;
@@ -263,9 +264,22 @@ static std::string toJsonFlat(const std::vector<VRFrameDataPlain>& frames, const
 
 
 void GestorTelemetria::serializeAndSend(const std::vector<VRFrameDataPlain>& chunk) {
-    if (!transport_) return;
+    const bool saveLocal = !cfg_.jsonOutputPrefix.empty();
+    if (!transport_ && !saveLocal) return;
     // Convert the chunk into JSON according to the configured feature flags
     const std::string json = toJsonFlat(chunk, sessionId_, deviceInfo_, cfg_);
+    // Local copy first, so it exists even when the upload fails or is disabled.
+    if (saveLocal) {
+        char suffix[32];
+        std::snprintf(suffix, sizeof(suffix), "_chunk%04d.json", ++chunkIndex_);
+        const std::string path = cfg_.jsonOutputPrefix + suffix;
+        if (lmc::writeStringToFile(path, json)) {
+            lmc::Log::info("Saved chunk locally, frames: %zu, path: %s", chunk.size(), path.c_str());
+        } else {
+            lmc::Log::err("Could not save chunk locally at '%s' (directory missing or read-only?)", path.c_str());
+        }
+    }
+    if (!transport_) return;
     // Perform the HTTP upload via the platform transport.
     const auto headers = lmc::buildSupabaseHeaders(cfg_.apiKey);
     bool ok = transport_->postJson(cfg_.endpointUrl, json, headers);

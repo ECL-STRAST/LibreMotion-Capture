@@ -113,7 +113,8 @@ their defaults. A full example is at the repository root (`initialConfig.json`).
   "secondaryButton": true,
   "grip": true,
   "trigger": true,
-  "joystick": true
+  "joystick": true,
+  "saveJsonLocally": false
 }
 ```
 
@@ -129,6 +130,7 @@ their defaults. A full example is at the repository root (`initialConfig.json`).
 | `grip` | bool | `false` | Feature flag → bitmask bit 3. |
 | `trigger` | bool | `false` | Feature flag → bitmask bit 4. |
 | `joystick` | bool | `false` | Feature flag → bitmask bit 5. |
+| `saveJsonLocally` | bool | `false` | Also writes every JSON chunk to disk, next to the C3D file, as `session_<id>_chunk<nnnn>.json` (numbered from `0001`, same body as the upload). Works with uploads disabled too. Not a feature flag. |
 
 Defaults, parsing and the `[1, 240]` frame-rate gate are in `cpp/core/config/ConfigParser.cpp`;
 the feature-flag bitmask (`handTracking`→bit0 … `joystick`→bit5) is exposed via
@@ -150,6 +152,8 @@ and uses defaults.
    after shutdown; the recorder logs the exact path (`C3DRecorder initialized. Path=...`).
 4. **JSON upload.** JSON chunks are `POST`ed to the configured `endpoint` (check your
    server / proxy). Force a chunk early with `telemetry_force_upload()`.
+   With `saveJsonLocally=true` each chunk is also written to `baseDir` as
+   `session_<id>_chunk<nnnn>.json` (logged as `Saved chunk locally, ... path: ...`).
 5. **Export check.** Confirm the C ABI is exported — commands in `cpp/README-build.md`.
 
 ---
@@ -198,6 +202,12 @@ Leave `handTracking=false` (the default) to capture HMD + controllers only.
   `telemetry_shutdown` writes the file: `sizeof(VRFrameDataPlain)` is 2552 bytes, so a
   90 Hz hour-long PC-VR session holds roughly 800 MB in `C3DRecorder::frames_`
   (`C3Dflush()` is still a no-op stub). Keep sessions bounded, or record at a lower rate.
+- **Local JSON copies (`saveJsonLocally`).** Each chunk is written by the upload worker
+  before it is posted, so the file exists even when the upload fails or uploads are
+  disabled. A write failure is logged as `Could not save chunk locally at '...'` and the
+  upload still goes ahead. Chunks dropped by the queue backpressure (more than 4 waiting)
+  are neither saved nor uploaded. On Android the files land in
+  `/sdcard/Android/data/<pkg>/files/`, beside the `.c3d`.
 - **A C3D write that cannot open its output is reported, not swallowed.** `ezc3d` opens
   the file and never checks `is_open()`, so the recorder now verifies the artifact after
   writing and logs `write produced no file at '...' (directory missing or read-only?)`

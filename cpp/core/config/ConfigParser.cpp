@@ -89,6 +89,7 @@ void configSetDefaults(UploaderConfig& c) {
     c.framesPerFile = kDefaultFramesPerFile;
     c.handTracking = c.primaryButton = c.secondaryButton = false;
     c.grip = c.trigger = c.joystick = false;
+    c.saveJsonLocally = false;
 }
 bool configParseJson(const std::string& t, UploaderConfig& c) {
     std::string s = c.endpointUrl, k = c.apiKey; int vi; bool vb;
@@ -101,6 +102,7 @@ bool configParseJson(const std::string& t, UploaderConfig& c) {
     if (extractJsonBool(t, "grip", vb))    c.grip = vb;
     if (extractJsonBool(t, "trigger", vb)) c.trigger = vb;
     if (extractJsonBool(t, "joystick", vb))c.joystick = vb;
+    if (extractJsonBool(t, "saveJsonLocally", vb)) c.saveJsonLocally = vb;
     return true;
 }
 int configParseFrameRate(const std::string& t, int fallback) {

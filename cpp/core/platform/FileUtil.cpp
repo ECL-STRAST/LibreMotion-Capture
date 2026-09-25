@@ -15,6 +15,13 @@ bool fileExists(const std::string& path) {
     std::ifstream in(path, std::ios::in | std::ios::binary);
     return static_cast<bool>(in);
 }
+bool writeStringToFile(const std::string& path, const std::string& text) {
+    std::ofstream out(path, std::ios::out | std::ios::binary | std::ios::trunc);
+    if (!out) return false;
+    out.write(text.data(), static_cast<std::streamsize>(text.size()));
+    out.close();
+    return static_cast<bool>(out);
+}
 std::string joinPath(const std::string& a, const std::string& b) {
     if (a.empty()) return b;
     char last = a.back();

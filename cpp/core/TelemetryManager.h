@@ -56,9 +56,13 @@ private:
     std::string sessionId_;
     std::string deviceInfo_;
 
-    // Serializes a completed chunk to JSON and sends it through the uploader.
+    // Serializes a completed chunk to JSON, writes it to disk when
+    // cfg_.jsonOutputPrefix is set, and sends it through the uploader.
     // This is invoked by the background worker thread.
     void serializeAndSend(const std::vector<VRFrameDataPlain>& chunk);
+    // Number of chunks serialized in this session; names the local JSON files.
+    // Only touched by the worker thread (and reset before it starts).
+    int chunkIndex_ = 0;
 
     // --- Asynchronous upload queue and worker thread --
     // Background worker that waits for chunks and uploads them.

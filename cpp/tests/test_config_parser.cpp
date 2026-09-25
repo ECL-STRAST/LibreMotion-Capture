@@ -44,3 +44,13 @@ TEST(ConfigParser, UploadsDisabledWithoutARealTarget) {
     cfg.endpointUrl.clear();
     EXPECT_FALSE(configUploadsEnabled(cfg));
 }
+
+TEST(ConfigParser, SaveJsonLocallyDefaultsOffAndParses) {
+    UploaderConfig cfg; configSetDefaults(cfg);
+    EXPECT_FALSE(cfg.saveJsonLocally);
+    ASSERT_TRUE(configParseJson(R"({"saveJsonLocally": true})", cfg));
+    EXPECT_TRUE(cfg.saveJsonLocally);
+    EXPECT_EQ(configFeatureFlagsBitmask(cfg), 0u);  // not a feature flag
+    ASSERT_TRUE(configParseJson(R"({"saveJsonLocally":false})", cfg));
+    EXPECT_FALSE(cfg.saveJsonLocally);
+}
