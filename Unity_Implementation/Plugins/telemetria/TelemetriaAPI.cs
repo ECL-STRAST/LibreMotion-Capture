@@ -9,6 +9,13 @@ public static class TelemetriaAPI
     private static extern void telemetry_set_java_context(IntPtr vm, IntPtr activity);
 #endif
 
+    // Fija la frecuencia de muestreo de la proxima telemetry_initialize, por encima del
+    // frameRate de initialConfig.json. hz en [1, 240] la fija, 0 la anula (vuelve el
+    // frameRate del config) y cualquier otro valor se ignora. Llamar antes de initialize;
+    // el valor se mantiene entre sesiones hasta que se cambie.
+    [DllImport("telemetria")]
+    public static extern void telemetry_set_frame_rate(int hz);
+
     [DllImport("telemetria")]
     public static extern int telemetry_initialize(ref TelemetryConfigPlain cfg);
 

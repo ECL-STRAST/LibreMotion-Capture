@@ -72,7 +72,7 @@ if(TELEMETRIA_PLATFORM_SOURCES)
     # some symbol is still undefined, and nothing in the platform sources references
     # it -> the object is dropped and the shared lib exports nothing usable
     # (Windows: Unreal fails with LNK2019 / delay-load; Android: the .so silently
-    # loses all 5 portable entry points). Fix (chosen over a .def file, which would
+    # loses all 6 portable entry points). Fix (chosen over a .def file, which would
     # need per-toolchain link flags and still compile the core copy as dllimport):
     # always compile the API translation unit into the shared target. On Windows
     # TELEMETRIA_EXPORTS turns them into __declspec(dllexport) so MSVC also emits the
@@ -112,7 +112,7 @@ if(TELEMETRIA_PLATFORM_SOURCES)
             COMMAND "${TELEMETRIA_POSIX_SHELL}" "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_exports.sh"
                     $<TARGET_FILE:telemetria> "${TELEMETRIA_EXPORT_TOOL}"
                     telemetry_initialize telemetry_record_frame telemetry_force_upload
-                    telemetry_shutdown telemetry_get_feature_flags
+                    telemetry_shutdown telemetry_get_feature_flags telemetry_set_frame_rate
             COMMENT "Verifying telemetria C ABI exports"
             VERBATIM)
         if(ANDROID)
@@ -143,6 +143,7 @@ if(TELEMETRIA_BUILD_TESTS AND NOT ANDROID)
         tests/test_c3d_recorder.cpp
         tests/test_http_headers.cpp
         tests/test_winhttp_target.cpp
+        tests/test_api_frame_rate.cpp
         platform/windows/WinPathResolver.cpp
         platform/windows/WinHttpTransport.cpp)
     target_link_libraries(telemetria_tests PRIVATE telemetria_core gtest gtest_main)

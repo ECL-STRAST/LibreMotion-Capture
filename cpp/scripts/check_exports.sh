@@ -7,7 +7,7 @@
 # <dump-tool> may be an objdump/llvm-objdump path, a dumpbin path, or empty
 # (MSVC leaves CMAKE_OBJDUMP unset). Artifact shapes are all covered:
 # ELF (.so, dynamic symbol table via objdump -T), PE via objdump -p and
-# via `dumpbin /exports`. When no usable tool exists at all the check is
+# via `dumpbin -exports`. When no usable tool exists at all the check is
 # SKIPPED (exit 0): a missing analysis tool must never break a good build.
 set -eu
 
@@ -34,7 +34,9 @@ fi
 
 case "$tool" in
     *dumpbin*)
-        dump="$("$tool" /exports "$artifact" 2>/dev/null || true)"
+        # "-exports", not "/exports": MSYS shells (Git for Windows sh) rewrite a leading
+        # "/" argument into a path, so dumpbin would dump C:\Program Files\Git\exports.
+        dump="$("$tool" -exports "$artifact" 2>/dev/null || true)"
         ;;
     *)
         # ELF -> dynamic symbol table (-T); PE/COFF -> export table (-p).

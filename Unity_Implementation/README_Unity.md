@@ -135,3 +135,9 @@ Correct execution can be verified by:
 - **Android**
 - Tested on **Meta Quest devices**
 
+
+---
+
+## 10. Recording at the headset's refresh rate
+
+`telemetry_set_frame_rate(hz)`, called before `telemetry_initialize`, replaces `frameRate` with the headset's actual refresh rate (one sample per displayed frame). `Scripts/HmdRefreshRate.cs` finds that rate (on Quest only from the XR plug-in, never measured) and the reference `Scripts/TelemetriaBootstrap.cs` uses it. See [HMD_REFRESH_RATE.md](HMD_REFRESH_RATE.md).

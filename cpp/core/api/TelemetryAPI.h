@@ -38,10 +38,22 @@ extern "C" {
 TELEMETRIA_API void telemetry_set_java_context(JavaVM* vm, jobject activity);
 #endif
 
+// Sets the sampling rate used by the next telemetry_initialize, overriding `frameRate`
+// from initialConfig.json (e.g. with the headset's display refresh rate).
+// - hz in [1, 240]: override `frameRate`.
+// - hz == 0       : clear the override; `frameRate` from the config (or 60) is used again.
+// - anything else : ignored (the previous value, override or none, is kept).
+// Call it before telemetry_initialize; a call while a session is running only affects the
+// next session. The value persists across telemetry_shutdown/telemetry_initialize until it
+// is changed again, so an app that runs several sessions sets it once.
+TELEMETRIA_API void telemetry_set_frame_rate(int hz);
+
 // Initializes the telemetry manager and HTTP uploader.
 // - cfg: basic configuration coming from Unity/Unreal (sessionId, deviceInfo).
 // Return:
-//   > 0 : frame rate that the caller should use for sampling (1 to 240).
+//   > 0 : frame rate that the caller should use for sampling (1 to 240). It is the
+//         telemetry_set_frame_rate override if one is set, otherwise `frameRate` from
+//         initialConfig.json, otherwise 60; the same value goes into the C3D header.
 //   < 0 : negative error code.
 TELEMETRIA_API int  telemetry_initialize(const TelemetryConfigPlain* cfg);
 

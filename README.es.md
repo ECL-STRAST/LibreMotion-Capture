@@ -32,6 +32,20 @@ JSON, el modelo de marcadores C3D, los flags de funcionalidad y las llamadas de 
 
 Los comandos de compilacion nativa de cada destino estan en **[cpp/README-build.md](cpp/README-build.md)**.
 
+### API en C
+
+Declarada en `cpp/core/api/TelemetryAPI.h` (bindings de C#: `Unity_Implementation/Plugins/telemetria/TelemetriaAPI.cs`):
+
+| Funcion | Uso |
+| --- | --- |
+| `telemetry_set_java_context(vm, activity)` | Solo Android, antes de `telemetry_initialize`: habilita las subidas a traves del AAR. |
+| `telemetry_set_frame_rate(hz)` | Antes de `telemetry_initialize`: `hz` en [1, 240] sustituye el `frameRate` de `initialConfig.json` (p. ej. por la frecuencia del visor), `0` anula la sustitucion. Se mantiene entre sesiones. Ver [Unity_Implementation/HMD_REFRESH_RATE.md](Unity_Implementation/HMD_REFRESH_RATE.md). |
+| `telemetry_initialize(cfg)` | Inicia una sesion. Devuelve la frecuencia de muestreo (1-240), la misma que se escribe en el C3D, o un error negativo. |
+| `telemetry_get_feature_flags()` | Bitmask de los campos opcionales activados en el config. |
+| `telemetry_record_frame(frame)` | Graba un frame (C3D + buffer JSON). |
+| `telemetry_force_upload()` | Sube ya el chunk JSON pendiente. |
+| `telemetry_shutdown()` | Escribe el fichero C3D y detiene el uploader. |
+
 ---
 
 ## Contenido del repositorio

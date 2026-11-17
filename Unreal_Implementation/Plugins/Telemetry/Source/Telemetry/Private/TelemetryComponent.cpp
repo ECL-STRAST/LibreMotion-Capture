@@ -79,6 +79,7 @@ extern "C" {
     };
 
 #if PLATFORM_ANDROID || PLATFORM_WINDOWS /* the only platforms Telemetry.Build.cs links telemetria for */
+    void telemetry_set_frame_rate(int hz);
     int  telemetry_initialize(const TelemetryConfigPlain* cfg);
     void telemetry_record_frame(const VRFrameDataPlain* frame);
     void telemetry_force_upload();
@@ -89,6 +90,7 @@ extern "C" {
     void telemetry_set_java_context(void* vm, void* activity);
 #endif
 #else
+    static inline void telemetry_set_frame_rate(int) {} /* inline: unused here, no -Wunused-function */
     static int  telemetry_initialize(const TelemetryConfigPlain*) { return 0; }
     static void telemetry_record_frame(const VRFrameDataPlain*) {}
     static void telemetry_force_upload() {}

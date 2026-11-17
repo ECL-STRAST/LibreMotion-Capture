@@ -69,7 +69,7 @@ cmake -S cpp -B cpp/build-win -G "Ninja" -DCMAKE_SYSTEM_NAME=Windows \
 Always verify the DLL actually exports the C ABI — the commands are in
 `cpp/README-build.md` ("Exported C ABI"). Expected on **Windows**: `telemetry_initialize`,
 `telemetry_record_frame`, `telemetry_force_upload`, `telemetry_shutdown`,
-`telemetry_get_feature_flags`, and **`telemetry_set_java_context` must be absent**
+`telemetry_get_feature_flags`, `telemetry_set_frame_rate`, and **`telemetry_set_java_context` must be absent**
 (Android-only). The check also runs automatically as a CMake `POST_BUILD` step
 (`cpp/scripts/check_exports.sh`), so a build that loses an export fails instead of shipping
 an unloadable DLL.
@@ -123,7 +123,7 @@ their defaults. A full example is at the repository root (`initialConfig.json`).
 | `endpoint` | string | `http://localhost:1414` | REST endpoint that receives the JSON chunks (Supabase/PostgREST style). |
 | `apiKey` | string | `non_existant` | Sent as the API key header. If `endpoint` or `apiKey` ends up empty or still holds its placeholder default (no config file, or the key missing from it), uploads are disabled at init (C3D + buffering keep working). |
 | `framesPerFile` | int | `200` | Frames buffered per JSON chunk; must be `> 0`. |
-| `frameRate` | int | `60` | Returned to the engine (`rc`). Accepted range **[1, 240]**; out of range falls back to `60`. |
+| `frameRate` | int | `60` | Returned to the engine (`rc`) and written to the C3D header. Accepted range **[1, 240]**; out of range falls back to `60`. A `telemetry_set_frame_rate(hz)` call before `telemetry_initialize` overrides it (see `Unity_Implementation/HMD_REFRESH_RATE.md`). |
 | `handTracking` | bool | `false` | Enables hand-joint capture (optional at runtime, see §6). |
 | `primaryButton` | bool | `false` | Feature flag → bitmask bit 1. |
 | `secondaryButton` | bool | `false` | Feature flag → bitmask bit 2. |

@@ -20,8 +20,25 @@ static GestorTelemetria g_gestor;
 static C3DRecorder      g_c3d;
 // Cached feature flags to be exposed through telemetry_get_feature_flags().
 static unsigned g_featureFlags = 0;
+// Sampling rate set through telemetry_set_frame_rate (0 = none, use the config file).
+// Not reset by telemetry_shutdown: it applies to every later session until changed.
+static int g_frameRateOverride = 0;
 
 extern "C" {
+
+void telemetry_set_frame_rate(int hz) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    if (hz == 0) {
+        g_frameRateOverride = 0;
+        return;
+    }
+    if (hz < 1 || hz > 240) {
+        // The platform log sink may not be installed yet; this still reaches stderr.
+        lmc::Log::warn("telemetry_set_frame_rate(%d) ignored: outside [1, 240]", hz);
+        return;
+    }
+    g_frameRateOverride = hz;
+}
 
 int telemetry_initialize(const TelemetryConfigPlain* cfg) {
     std::lock_guard<std::mutex> lock(g_mutex);
@@ -96,11 +113,25 @@ int telemetry_initialize(const TelemetryConfigPlain* cfg) {
 
     lmc::Log::info("telemetry initialized");
 
-    // Sampling rate: default 60, overridden only by a readable config file.
+    // Sampling rate: telemetry_set_frame_rate override, else a readable config file,
+    // else 60. configParseFrameRate already rejects values outside [1, 240].
+    int configRate = 0;
+    if (haveConfig) configRate = lmc::configParseFrameRate(configText, 0);
     int frameRate = 60;
-    if (haveConfig) frameRate = lmc::configParseFrameRate(configText, 60);
-    // Keep the frame rate inside a safe [1, 240] range; otherwise fall back to 60.
-    if (frameRate < 1 || frameRate > 240) frameRate = 60;
+    const char* rateSource = "default";
+    if (g_frameRateOverride >= 1 && g_frameRateOverride <= 240) {
+        frameRate = g_frameRateOverride;
+        rateSource = "telemetry_set_frame_rate";
+    } else if (configRate >= 1 && configRate <= 240) {
+        frameRate = configRate;
+        rateSource = "initialConfig.json";
+    }
+    if (configRate > 0 && frameRate != configRate) {
+        lmc::Log::info("frameRate=%d (source: %s; initialConfig.json has %d)",
+                       frameRate, rateSource, configRate);
+    } else {
+        lmc::Log::info("frameRate=%d (source: %s)", frameRate, rateSource);
+    }
 
     // Initialize the C3D recorder. Even if it fails, HTTP telemetry still works.
     if (!g_c3d.C3Dinitialize(ucfg, frameRate, pb.paths)) {

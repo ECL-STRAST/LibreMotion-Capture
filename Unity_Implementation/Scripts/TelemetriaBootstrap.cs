@@ -1,11 +1,17 @@
 using System;
+using System.Collections;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.XR;
 using UnityEngine.XR.Hands;
 using UnityEngine.XR.Management;
 
+// Graba a la frecuencia real del visor (HmdRefreshRate.cs, ver HMD_REFRESH_RATE.md): espera
+// a conocerla, la pasa con telemetry_set_frame_rate y despues llama a telemetry_initialize.
+// "useHmdRefreshRate": false en initialConfig.json lo desactiva (se usa su frameRate).
 public class TelemetriaBootstrap : MonoBehaviour
 {
     // Son los valores de configuracion para la bbdd
@@ -31,6 +37,11 @@ public class TelemetriaBootstrap : MonoBehaviour
 
     // Suscripcion a onBeforeRender
     bool subscribed = false;
+    // telemetry_initialize ya se llamo (la inicializacion espera a HmdRefreshRate)
+    bool initialized = false;
+
+    // Solo lectura: initialConfig.json nunca se modifica
+    static readonly Regex HmdRateDisabled = new Regex(@"""useHmdRefreshRate""\s*:\s*false");
 
     //flags de botones
     bool fHand, fPrimary, fSecondary, fGrip, fTrigger, fJoystick;
@@ -76,7 +87,45 @@ public class TelemetriaBootstrap : MonoBehaviour
         return $"{appPrefix}-{ts}-{rnd}";
     }
 
+    // Carpeta donde el nativo busca initialConfig.json: baseDir en PC, la carpeta de la app
+    // en Android (/storage/emulated/0/Android/data/<paquete>/files = persistentDataPath)
+    static string ConfigPath()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        return Path.Combine(Application.persistentDataPath, "initialConfig.json");
+#else
+        return Path.Combine(Application.dataPath, "initialConfig.json");
+#endif
+    }
+
+    // Frecuencia del visor si se conoce y el config no la desactiva; 0 = usar frameRate del config
+    static int HmdFrameRate()
+    {
+        if (HmdRefreshRate.Hz <= 0) return 0;
+        try
+        {
+            string path = ConfigPath();
+            if (File.Exists(path) && HmdRateDisabled.IsMatch(File.ReadAllText(path))) return 0;
+        }
+        catch (Exception e) { Debug.LogWarning("[Telemetria] no se pudo leer " + ConfigPath() + ": " + e.Message); }
+        return HmdRefreshRate.Hz;
+    }
+
     void Awake()
+    {
+        // La frecuencia del visor se conoce en los primeros frames de la app; si aun no
+        // esta, se espera y la grabacion empieza unos frames mas tarde.
+        if (HmdRefreshRate.Resolved) Initialize();
+        else StartCoroutine(InitializeWhenRateKnown());
+    }
+
+    IEnumerator InitializeWhenRateKnown()
+    {
+        while (!HmdRefreshRate.Resolved) yield return null;
+        Initialize();
+    }
+
+    void Initialize()
     {
         //hand tracking 
         var loader = XRGeneralSettings.Instance?.Manager?.activeLoader;
@@ -104,8 +153,13 @@ public class TelemetriaBootstrap : MonoBehaviour
             baseDir = baseDirPtr
         };
 
+        // Antes de initialize: frecuencia del visor, o 0 para usar frameRate del config
+        int hmdHz = HmdFrameRate();
+        TelemetriaAPI.telemetry_set_frame_rate(hmdHz);
         int rc = TelemetriaAPI.telemetry_initialize(ref cfg);
-        Debug.Log("telemetry_initialize rc=" + rc);
+        initialized = true;
+        Debug.Log("telemetry_initialize rc=" + rc + " (visor: " + (hmdHz > 0 ? hmdHz + " Hz" : "no usado")
+                  + ", " + HmdRefreshRate.Source + ")");
 
         // Validar y fijar la frecuencia efectiva (Hz)
         if (rc >= 1 && rc <= 240)
@@ -159,6 +213,7 @@ public class TelemetriaBootstrap : MonoBehaviour
     // Tick justo antes de renderizar: aplicamos rate limiting (por segundo) // cambiamos el sentido de eje Z para standard OpenXR
     void OnBeforeRenderTick()
     {
+        if (!initialized) return;
         double now = Time.realtimeSinceStartupAsDouble;
         //para que el primer frame tenga timestamp 0
         if (!zeroed)
@@ -168,7 +223,9 @@ public class TelemetriaBootstrap : MonoBehaviour
         }
 
         // --- Tope por segundo (periodo basado en frameRateHz) ---
-        if (now < nextTickSec)
+        // Medio periodo de margen: a la frecuencia del visor, un frame que llega una
+        // fraccion de ms antes de tiempo no debe descartarse
+        if (now < nextTickSec - periodSec * 0.5)
             return;
 
         // Avanzar el tick. Si hubo mucha demora, actualizamos el tiempo del siguiente frame para evitar rafagas.
@@ -330,8 +387,11 @@ public class TelemetriaBootstrap : MonoBehaviour
             Application.onBeforeRender -= OnBeforeRenderTick;
             subscribed = false;
         }
-        TelemetriaAPI.telemetry_force_upload();
-        TelemetriaAPI.telemetry_shutdown();
+        if (initialized)
+        {
+            TelemetriaAPI.telemetry_force_upload();
+            TelemetriaAPI.telemetry_shutdown();
+        }
 
         if (sessPtr != IntPtr.Zero) Marshal.FreeHGlobal(sessPtr);
         if (devInfoPtr != IntPtr.Zero) Marshal.FreeHGlobal(devInfoPtr);

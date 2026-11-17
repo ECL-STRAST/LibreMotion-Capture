@@ -32,6 +32,20 @@ format, C3D marker model, feature flags and lifecycle calls:
 
 Native build commands for every target live in **[cpp/README-build.md](cpp/README-build.md)**.
 
+### C API
+
+Declared in `cpp/core/api/TelemetryAPI.h` (C# bindings: `Unity_Implementation/Plugins/telemetria/TelemetriaAPI.cs`):
+
+| Function | Purpose |
+| --- | --- |
+| `telemetry_set_java_context(vm, activity)` | Android only, before `telemetry_initialize`: enables uploads through the AAR. |
+| `telemetry_set_frame_rate(hz)` | Before `telemetry_initialize`: `hz` in [1, 240] overrides `frameRate` from `initialConfig.json` (e.g. with the headset's refresh rate), `0` clears the override. Persists across sessions. See [Unity_Implementation/HMD_REFRESH_RATE.md](Unity_Implementation/HMD_REFRESH_RATE.md). |
+| `telemetry_initialize(cfg)` | Starts a session. Returns the sampling rate (1–240), also written to the C3D, or a negative error. |
+| `telemetry_get_feature_flags()` | Bitmask of the optional fields enabled in the config. |
+| `telemetry_record_frame(frame)` | Records one frame (C3D + JSON buffer). |
+| `telemetry_force_upload()` | Uploads the pending JSON chunk now. |
+| `telemetry_shutdown()` | Writes the C3D file and stops the uploader. |
+
 ---
 
 ## Repository contents
