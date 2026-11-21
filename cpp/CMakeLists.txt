@@ -113,6 +113,7 @@ if(TELEMETRIA_PLATFORM_SOURCES)
                     $<TARGET_FILE:telemetria> "${TELEMETRIA_EXPORT_TOOL}"
                     telemetry_initialize telemetry_record_frame telemetry_force_upload
                     telemetry_shutdown telemetry_get_feature_flags telemetry_set_frame_rate
+                    telemetry_record_frame_ex
             COMMENT "Verifying telemetria C ABI exports"
             VERBATIM)
         if(ANDROID)
@@ -141,6 +142,7 @@ if(TELEMETRIA_BUILD_TESTS AND NOT ANDROID)
         tests/test_path_resolver_win.cpp
         tests/test_manager.cpp
         tests/test_c3d_recorder.cpp
+        tests/test_c3d_validity.cpp
         tests/test_http_headers.cpp
         tests/test_winhttp_target.cpp
         tests/test_api_frame_rate.cpp

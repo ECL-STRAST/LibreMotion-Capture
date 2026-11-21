@@ -154,6 +154,14 @@ void telemetry_record_frame(const VRFrameDataPlain* frame) {
     g_gestor.recordFrame(*frame);
 }
 
+void telemetry_record_frame_ex(const VRFrameDataPlain* frame, const VRFrameValidityPlain* validity) {
+    if (!frame) return;
+    // C3D with the tracking state (null validity = as telemetry_record_frame).
+    g_c3d.C3DrecordFrame(*frame, validity);
+    // The JSON wire format is unchanged.
+    g_gestor.recordFrame(*frame);
+}
+
 void telemetry_force_upload() {
     // Ask GestorTelemetria to close the current buffer and enqueue it for upload,
     // even if framesPerFile was not reached yet.

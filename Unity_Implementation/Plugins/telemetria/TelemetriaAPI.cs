@@ -22,6 +22,11 @@ public static class TelemetriaAPI
     [DllImport("telemetria")]
     public static extern void telemetry_record_frame(ref VRFrameDataPlain frame);
 
+    // Same, plus the frame's tracking state for the C3D (headset pose present, per-device flags).
+    // v1.1.0 and later; older binaries do not export it. See docs/C3D_FORMAT_CHANGES.md.
+    [DllImport("telemetria")]
+    public static extern void telemetry_record_frame_ex(ref VRFrameDataPlain frame, ref VRFrameValidityPlain validity);
+
     [DllImport("telemetria")]
     public static extern void telemetry_force_upload();
 
@@ -100,4 +105,14 @@ public struct VRFrameDataPlain
     [MarshalAs(UnmanagedType.ByValArray, SizeConst = 30)]
     public JointSamplePlain[] rightHandJoints;
     public int rightHandJointCount;
+}
+
+// Matches struct VRFrameValidityPlain (cpp/core/VRTypes.h).
+[StructLayout(LayoutKind.Sequential)]
+public struct VRFrameValidityPlain
+{
+    public int hmdHasPose;   // 0 = the headset has no pose: HEAD/LFHD/RFHD missing, HMD_q* 0
+    public uint hmdFlags;    // stored verbatim in the C3D channels HMD_flags, L_flags, R_flags
+    public uint leftFlags;
+    public uint rightFlags;
 }

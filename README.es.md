@@ -43,8 +43,22 @@ Declarada en `cpp/core/api/TelemetryAPI.h` (bindings de C#: `Unity_Implementatio
 | `telemetry_initialize(cfg)` | Inicia una sesion. Devuelve la frecuencia de muestreo (1-240), la misma que se escribe en el C3D, o un error negativo. |
 | `telemetry_get_feature_flags()` | Bitmask de los campos opcionales activados en el config. |
 | `telemetry_record_frame(frame)` | Graba un frame (C3D + buffer JSON). |
+| `telemetry_record_frame_ex(frame, validity)` | Igual, mas el estado de seguimiento del frame (`VRFrameValidityPlain`: pose del casco presente, flags por dispositivo) para el C3D. `validity = NULL` graba exactamente como `telemetry_record_frame`. |
 | `telemetry_force_upload()` | Sube ya el chunk JSON pendiente. |
 | `telemetry_shutdown()` | Escribe el fichero C3D y detiene el uploader. |
+
+
+### Estructura del C3D
+
+Un fichero por sesion (`session_<sessionId>.c3d`). Ejes de marcha (X adelante, Y izquierda, Z
+arriba), milimetros, float32, una muestra analogica por frame. Puntos (59): `HEAD`, `LFHD`,
+`RFHD`, 26 articulaciones por mano (`LFIN` / `RFIN` = posicion del mando), `LWRA`, `LWRB`, `RWRA`,
+`RWRB`; residual -1 = ausente. `HEAD`, `LFHD` y `RFHD` solo se escriben como ausentes si el frame
+se grabo con `telemetry_record_frame_ex` y `hmdHasPose == 0`. Canales analogicos (218): 0-211
+cuaterniones (`HMD_q*`, `L<art>_q*`, `R<art>_q*`), 212 `RealTime` (float32), 213 `RealTime_s`
+(segundos enteros), 214 `RealTime_frac` (resto; la suma es el tiempo con precision de ~1e-7 s),
+215-217 `HMD_flags`, `L_flags`, `R_flags` (bits de la aplicacion, exactos hasta 24 bits; -1 si no
+se informaron). Los canales 0-212 conservan etiqueta e indice; detalles en `README.md`.
 
 ---
 

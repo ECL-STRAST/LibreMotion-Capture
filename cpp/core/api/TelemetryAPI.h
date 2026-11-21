@@ -63,6 +63,16 @@ TELEMETRIA_API int  telemetry_initialize(const TelemetryConfigPlain* cfg);
 //   - append the frame to the JSON buffer in GestorTelemetria.
 TELEMETRIA_API void telemetry_record_frame(const VRFrameDataPlain* frame);
 
+// Same as telemetry_record_frame, plus the frame's tracking state (VRTypes.h):
+//   - validity->hmdHasPose == 0: the headset has no pose; its C3D points (HEAD, LFHD,
+//     RFHD) are written as missing (residual -1) and its quaternion channels as 0;
+//   - hmdFlags / leftFlags / rightFlags: stored verbatim in the analog channels
+//     HMD_flags, L_flags, R_flags (exact up to 2^24).
+// validity == NULL records exactly like telemetry_record_frame (flag channels -1).
+// Frames of one session may mix both calls. The JSON upload is not affected.
+TELEMETRIA_API void telemetry_record_frame_ex(const VRFrameDataPlain* frame,
+                                              const VRFrameValidityPlain* validity);
+
 // Forces upload of any telemetry JSON chunks left.
 // This can be called when the app is about to go to background to avoid losing any data
 TELEMETRIA_API void telemetry_force_upload();

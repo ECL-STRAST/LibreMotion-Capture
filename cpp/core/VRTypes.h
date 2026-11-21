@@ -44,3 +44,18 @@ struct VRFrameDataPlain {
     JointSamplePlain rightHandJoints[30]; // right hand joints
     int rightHandJointCount;
 };
+
+// Optional per-frame tracking state, passed with telemetry_record_frame_ex next to a
+// VRFrameDataPlain (whose layout stays unchanged). A frame recorded without it (plain
+// telemetry_record_frame, or a null pointer) is written exactly as before.
+struct VRFrameValidityPlain {
+    // 0 = the headset has no pose in this frame: HEAD, LFHD and RFHD are written as
+    // missing (residual -1) and the HMD_q* channels as 0. Any other value = pose present.
+    int hmdHasPose;
+    // The application's own per-device tracking bits, stored verbatim in the C3D analog
+    // channels HMD_flags, L_flags and R_flags. They are written as float32, so values up to
+    // 2^24 (bits 0-23) are exact. The library does not interpret them.
+    unsigned int hmdFlags;
+    unsigned int leftFlags;
+    unsigned int rightFlags;
+};

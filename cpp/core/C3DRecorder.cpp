@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <cmath>
 
 #include <ezc3d/ezc3d.h> // Libreria externa open source para tratamiento de archivos c3d
 #include <ezc3d/Parameters.h>
@@ -45,6 +46,7 @@ bool C3DRecorder::C3Dinitialize(const UploaderConfig& cfg, int frameRate, lmc::I
         LOGI("C3DRecorder: previous session finalized, starting a new one.");
         finalized_ = false;
         frames_.clear();
+        validity_.clear();
     }
 
     if (resolver == nullptr) {
@@ -62,6 +64,7 @@ bool C3DRecorder::C3Dinitialize(const UploaderConfig& cfg, int frameRate, lmc::I
     if (frameRate_ <= 0) frameRate_ = 60;
 
     frames_.clear();
+    validity_.clear();
     finalized_ = false;
     initialized_ = true;
 
@@ -73,11 +76,21 @@ bool C3DRecorder::C3Dinitialize(const UploaderConfig& cfg, int frameRate, lmc::I
 }
 
 void C3DRecorder::C3DrecordFrame(const VRFrameDataPlain& frame) {
+    C3DrecordFrame(frame, nullptr);
+}
+
+void C3DRecorder::C3DrecordFrame(const VRFrameDataPlain& frame, const VRFrameValidityPlain* validity) {
     std::lock_guard<std::mutex> lock(mtx_);
     if (!initialized_ || finalized_) {
         return;
     }
     frames_.push_back(frame);
+    FrameValidity fv;
+    if (validity) {
+        fv.reported = true;
+        fv.v = *validity;
+    }
+    validity_.push_back(fv);
 }
 
 void C3DRecorder::C3Dflush() {
@@ -186,6 +199,17 @@ void C3DRecorder::buildAnalogNames(std::vector<std::string>& outAnalogNames) con
     }
     // Necessary extra channel since our record frequency has jitter (not expected usually on C3d files)
     outAnalogNames.emplace_back("RealTime");
+    // Appended after RealTime so that every earlier channel keeps its label and index.
+    // RealTime is float32 (about 0.1 ms steps after a few minutes); the time stamp is
+    // also written in two parts whose sum is the double time to float32 precision of
+    // the fraction: whole seconds (exact up to 2^24 s) and the rest, in [0, 1).
+    outAnalogNames.emplace_back("RealTime_s");
+    outAnalogNames.emplace_back("RealTime_frac");
+    // The application's per-device tracking bits (telemetry_record_frame_ex), as exact
+    // small integers; -1 when the frame was recorded without them.
+    outAnalogNames.emplace_back("HMD_flags");
+    outAnalogNames.emplace_back("L_flags");
+    outAnalogNames.emplace_back("R_flags");
 }
 
 // helper to calculate 2 points from center-eye to match Gait Model front head points
@@ -386,6 +410,7 @@ void C3DRecorder::writeC3D() {
     // For each recorded frame, create a C3D frame and fill points + analogs.
     for (size_t i = 0; i < nbFrames; ++i) {
         const VRFrameDataPlain& f = frames_[i];
+        const FrameValidity& fv = validity_[i];
 
         ezc3d::DataNS::Frame frame;
 
@@ -420,49 +445,55 @@ void C3DRecorder::writeC3D() {
             const size_t IDX_RWRA        = IDX_LWRA + 2;
             const size_t IDX_RWRB        = IDX_LWRA + 3;
 
-            // HMD (HEAD)
-            {
-                float x = f.hmdPose.position[0];
-                float y = f.hmdPose.position[1];
-                float z = f.hmdPose.position[2];
+            // Headset pose present unless the application reported otherwise
+            // (telemetry_record_frame_ex with hmdHasPose == 0). Without a pose, HEAD, LFHD
+            // and RFHD stay missing (residual -1) instead of a tracked point at the origin.
+            const bool hmdPresent = !fv.reported || fv.v.hmdHasPose != 0;
+            if (hmdPresent) {
+                // HMD (HEAD)
+                {
+                    float x = f.hmdPose.position[0];
+                    float y = f.hmdPose.position[1];
+                    float z = f.hmdPose.position[2];
 
-                openxrToGaitAxes(x, y, z);
-                metersToMillimeters(x, y, z);
+                    openxrToGaitAxes(x, y, z);
+                    metersToMillimeters(x, y, z);
 
-                Point p;
-                p.x(x);
-                p.y(y);
-                p.z(z);
-                p.residual(0.0);
-                points.point(p, static_cast<int>(IDX_HEAD));
-            }
+                    Point p;
+                    p.x(x);
+                    p.y(y);
+                    p.z(z);
+                    p.residual(0.0);
+                    points.point(p, static_cast<int>(IDX_HEAD));
+                }
 
-            // Extra head markers LFHD / RFHD from head width
-            Vector3 headRight, headLeft;
-            calculateHeadWidth(f.hmdPose, headRight, headLeft, 0.15f);
+                // Extra head markers LFHD / RFHD from head width
+                Vector3 headRight, headLeft;
+                calculateHeadWidth(f.hmdPose, headRight, headLeft, 0.15f);
 
-            // LFHD = left side
-            openxrToGaitAxes(headLeft);
-            metersToMillimeters(headLeft);
-            {
-                Point p;
-                p.x(headLeft.x);
-                p.y(headLeft.y);
-                p.z(headLeft.z);
-                p.residual(0.0);
-                points.point(p, static_cast<int>(IDX_LFHD));
-            }
+                // LFHD = left side
+                openxrToGaitAxes(headLeft);
+                metersToMillimeters(headLeft);
+                {
+                    Point p;
+                    p.x(headLeft.x);
+                    p.y(headLeft.y);
+                    p.z(headLeft.z);
+                    p.residual(0.0);
+                    points.point(p, static_cast<int>(IDX_LFHD));
+                }
 
-            // RFHD = right side
-            openxrToGaitAxes(headRight);
-            metersToMillimeters(headRight);
-            {
-                Point p;
-                p.x(headRight.x);
-                p.y(headRight.y);
-                p.z(headRight.z);
-                p.residual(0.0);
-                points.point(p, static_cast<int>(IDX_RFHD));
+                // RFHD = right side
+                openxrToGaitAxes(headRight);
+                metersToMillimeters(headRight);
+                {
+                    Point p;
+                    p.x(headRight.x);
+                    p.y(headRight.y);
+                    p.z(headRight.z);
+                    p.residual(0.0);
+                    points.point(p, static_cast<int>(IDX_RFHD));
+                }
             }
 
             // L_CTRL (if its valid it will have 0 joints but we do a double check)
@@ -656,9 +687,11 @@ void C3DRecorder::writeC3D() {
             const size_t ANA_R_BASE = ANA_L_BASE + 26 * 4;
             const size_t FIN_SLOT   = 7;               // kHandJointNames[7] = "FIN"
 
-            // HMD quaternion
-            setQuat(ANA_HMD, f.hmdPose.rotation[0], f.hmdPose.rotation[1],
-                    f.hmdPose.rotation[2], f.hmdPose.rotation[3]);
+            // HMD quaternion (left at 0 when the application reported no headset pose)
+            if (!fv.reported || fv.v.hmdHasPose != 0) {
+                setQuat(ANA_HMD, f.hmdPose.rotation[0], f.hmdPose.rotation[1],
+                        f.hmdPose.rotation[2], f.hmdPose.rotation[3]);
+            }
 
             // Controller quaternions go to the FIN slot, the same marker that holds the
             // controller position in the point data.
@@ -683,10 +716,20 @@ void C3DRecorder::writeC3D() {
                 if (slot >= 0) setQuat(ANA_R_BASE + (size_t)slot * 4, s.qx, s.qy, s.qz, s.qw);
             }
 
-            // Extra channel for real time
-            if (nbAnalogs > 0) {
-                const size_t timeIdx = nbAnalogs - 1; // always last no matter size
-                setChan(timeIdx, static_cast<float>(f.timestampSec));
+            // Extra channel for real time, at the fixed index it has always had (the
+            // channel after the 1 + 2 * 26 quaternions); later channels are appended.
+            const size_t ANA_REALTIME = ANA_R_BASE + 26 * 4;
+            if (ANA_REALTIME + 5 < nbAnalogs) {
+                setChan(ANA_REALTIME, static_cast<float>(f.timestampSec));
+                // RealTime_s + RealTime_frac: the double time stamp split so that float32
+                // keeps it (seconds exact; the fraction to about 6e-8 s).
+                const double whole = std::floor(f.timestampSec);
+                setChan(ANA_REALTIME + 1, static_cast<float>(whole));
+                setChan(ANA_REALTIME + 2, static_cast<float>(f.timestampSec - whole));
+                // Per-device tracking bits, or -1 when they were not reported.
+                setChan(ANA_REALTIME + 3, fv.reported ? static_cast<float>(fv.v.hmdFlags) : -1.0f);
+                setChan(ANA_REALTIME + 4, fv.reported ? static_cast<float>(fv.v.leftFlags) : -1.0f);
+                setChan(ANA_REALTIME + 5, fv.reported ? static_cast<float>(fv.v.rightFlags) : -1.0f);
             }
 
             Analogs analogs;

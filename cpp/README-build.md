@@ -77,13 +77,14 @@ Windows) / `__declspec(dllimport)` for consumers, and default visibility elsewhe
 # Windows (MinGW cross-build shown here; MSVC: dumpbin /exports telemetria.dll)
 x86_64-w64-mingw32-objdump -p cpp/build-win/libtelemetria.dll | grep telemetry_
 # expect exactly: telemetry_initialize, telemetry_record_frame, telemetry_force_upload,
-# telemetry_shutdown, telemetry_get_feature_flags, telemetry_set_frame_rate
+# telemetry_shutdown, telemetry_get_feature_flags, telemetry_set_frame_rate,
+# telemetry_record_frame_ex
 # telemetry_set_java_context MUST be absent on Windows (Android-only)
 
 # Android
 $NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf --dyn-syms \
     cpp/build-arm64/libtelemetria.so | grep -E "telemetry_|JNI_OnLoad"
-# expect the 6 above + telemetry_set_java_context + JNI_OnLoad
+# expect the 7 above + telemetry_set_java_context + JNI_OnLoad
 ```
 
 Both builds run this check automatically (`cpp/scripts/check_exports.sh` as a `POST_BUILD`

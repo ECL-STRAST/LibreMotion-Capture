@@ -11,6 +11,7 @@
 #include <ezc3d/Parameters.h>
 #include <ezc3d/Group.h>
 #include <ezc3d/Parameter.h>
+#include <ezc3d/Data.h>
 #include <string>
 using namespace lmc;
 
@@ -129,4 +130,38 @@ TEST_F(ApiFrameRate, OverridePersistsAcrossSessions) {
     EXPECT_EQ(first.rc, 80);
     EXPECT_EQ(second.rc, 80);
     EXPECT_EQ(second.pointRate, 80.0);
+}
+
+// telemetry_record_frame_ex through the C API (lives here because this file provides the
+// test binary's platform bundle): null validity records like telemetry_record_frame,
+// a reported headset without a pose is written as missing, the flags are stored.
+TEST_F(ApiFrameRate, RecordFrameExCarriesValidity) {
+    WinTempDir tmp;
+    TelemetryConfigPlain cfg{ "s1", "test", tmp.dir().c_str() };
+    ASSERT_GT(telemetry_initialize(&cfg), 0);
+    VRFrameDataPlain f{}; f.timestampSec = 2.0; f.hmdPose.rotation[3] = 1.f;
+    telemetry_record_frame(&f);
+    telemetry_record_frame_ex(&f, nullptr);
+    VRFrameValidityPlain v{ 0, 512u, 0u, 1027u };
+    telemetry_record_frame_ex(&f, &v);
+    telemetry_record_frame_ex(nullptr, &v);       // ignored, as telemetry_record_frame(nullptr)
+    telemetry_shutdown();
+
+    ezc3d::c3d file(tmp.c3dPath());
+    ASSERT_EQ(file.data().nbFrames(), 3u);
+    const auto& names = file.channelNames();
+    ASSERT_EQ(names.size(), 218u);
+    ASSERT_EQ(names[215], "HMD_flags");
+    auto ch = [&](size_t frame, size_t idx) {
+        return file.data().frame(frame).analogs().subframe(0).channel(idx).data();
+    };
+    for (size_t i = 0; i < 2; ++i) {
+        EXPECT_EQ(file.data().frame(i).points().point(0).residual(), 0.0);
+        EXPECT_EQ(ch(i, 215), -1.0);
+    }
+    EXPECT_LT(file.data().frame(2).points().point(0).residual(), 0.0);
+    EXPECT_EQ(ch(2, 3), 0.0);                     // HMD_qw
+    EXPECT_EQ(ch(2, 215), 512.0);
+    EXPECT_EQ(ch(2, 216), 0.0);
+    EXPECT_EQ(ch(2, 217), 1027.0);
 }

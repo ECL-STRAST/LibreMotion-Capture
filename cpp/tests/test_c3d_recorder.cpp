@@ -33,7 +33,10 @@ TEST(C3dRecorder, WritesAndReadsBackExpectedLayout) {
     EXPECT_EQ(file.pointNames().size(), 3u + 26u + 26u + 4u); // HEAD,LFHD,RFHD + hands + wrists
     EXPECT_EQ(file.pointNames()[0], "HEAD");
     EXPECT_EQ(file.pointNames()[3], "LWRT");                  // left hand base joint 0
-    EXPECT_EQ(file.channelNames().back(), "RealTime");
+    // RealTime keeps its index (after HMD + 2 x 26 quaternions); five channels follow it.
+    ASSERT_EQ(file.channelNames().size(), 4u * (1u + 26u + 26u) + 1u + 5u);
+    EXPECT_EQ(file.channelNames()[4 * 53], "RealTime");
+    EXPECT_EQ(file.channelNames().back(), "R_flags");
     EXPECT_EQ(file.parameters().group("POINT").parameter("RATE").valuesAsDouble()[0], 60.0);
 }
 

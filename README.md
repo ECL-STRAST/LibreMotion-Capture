@@ -43,8 +43,44 @@ Declared in `cpp/core/api/TelemetryAPI.h` (C# bindings: `Unity_Implementation/Pl
 | `telemetry_initialize(cfg)` | Starts a session. Returns the sampling rate (1–240), also written to the C3D, or a negative error. |
 | `telemetry_get_feature_flags()` | Bitmask of the optional fields enabled in the config. |
 | `telemetry_record_frame(frame)` | Records one frame (C3D + JSON buffer). |
+| `telemetry_record_frame_ex(frame, validity)` | Same, plus the frame's tracking state (`VRFrameValidityPlain`: headset pose present, per-device flags) for the C3D. `validity = NULL` records exactly like `telemetry_record_frame`. |
 | `telemetry_force_upload()` | Uploads the pending JSON chunk now. |
 | `telemetry_shutdown()` | Writes the C3D file and stops the uploader. |
+
+
+### C3D layout
+
+One file per session (`session_<sessionId>.c3d`), written by `telemetry_shutdown`. Gait axes
+(X forward, Y left, Z up, converted from OpenXR), millimetres, float32, one analog sample per
+frame (`ANALOG:RATE` = `POINT:RATE` = the sampling rate).
+
+**Points (59)**, in this order: `HEAD` (headset), `LFHD` / `RFHD` (derived from the headset pose,
+0.15 m apart), 26 left-hand joints `L<joint>`, 26 right-hand joints `R<joint>` (joint names in
+`C3DRecorder.cpp`; a controller's position goes to `LFIN` / `RFIN`), and `LWRA`, `LWRB`, `RWRA`,
+`RWRB`. A missing point has residual -1. A controller is missing when `isActive` is 0 (or its
+position is exactly 0,0,0). `HEAD`, `LFHD` and `RFHD` are missing only when the frame was recorded
+with `telemetry_record_frame_ex` and `validity->hmdHasPose == 0`; otherwise they are always
+written as present.
+
+**Analog channels (218)**, by index:
+
+| Index | Label | Content |
+| --- | --- | --- |
+| 0-3 | `HMD_qx` ... `HMD_qw` | Headset orientation (0 when `hmdHasPose == 0` was reported). |
+| 4-107 | `L<joint>_q*` | Left-hand joint orientations; the left controller's in `LFIN_q*`. 0 when absent. |
+| 108-211 | `R<joint>_q*` | Right hand, likewise (`RFIN_q*`). |
+| 212 | `RealTime` | `timestampSec` as float32 (steps of about 0.1 ms after 20 min). |
+| 213 | `RealTime_s` | Whole seconds of `timestampSec` (exact). |
+| 214 | `RealTime_frac` | The rest, in [0, 1). `RealTime_s + RealTime_frac` = `timestampSec` to about 1e-7 s. |
+| 215 | `HMD_flags` | The application's headset tracking bits (`validity->hmdFlags`), or -1 when not reported. |
+| 216 | `L_flags` | Left controller bits (`validity->leftFlags`), or -1. |
+| 217 | `R_flags` | Right controller bits (`validity->rightFlags`), or -1. |
+
+Channels 0-212 have the labels and indices they had before channels 213-217 were added, so a
+reader that looks channels up by label, or by index up to 212, reads files of both versions.
+`RealTime` is no longer the last channel. The flag bits are the application's own and are not
+interpreted by the library; they are exact as long as they fit in 24 bits. The JSON upload does
+not carry the validity.
 
 ---
 

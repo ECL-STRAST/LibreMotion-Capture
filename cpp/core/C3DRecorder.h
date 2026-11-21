@@ -29,6 +29,10 @@ public:
     // The frame is simply pushed into an internal vector and will be converted into C3D data later when finalize is called.
     void C3DrecordFrame(const VRFrameDataPlain& frame);
 
+    // Same, with the frame's tracking state (see VRFrameValidityPlain). validity == nullptr
+    // records exactly like C3DrecordFrame(frame).
+    void C3DrecordFrame(const VRFrameDataPlain& frame, const VRFrameValidityPlain* validity);
+
     // Later on, if larger time sessions are needed, the C3D will be split into multiple files.
     void C3Dflush();
 
@@ -52,6 +56,13 @@ private:
 
     // We store all frames during the session and then write the C3D complete
     std::vector<VRFrameDataPlain> frames_;
+
+    // Tracking state of each frame, parallel to frames_ (same index).
+    struct FrameValidity {
+        bool reported = false;          // false: recorded without validity (flag channels -1)
+        VRFrameValidityPlain v{};
+    };
+    std::vector<FrameValidity> validity_;
 
     // Construct points and analog channel names for c3d
     void buildPointNames(std::vector<std::string>& outPointNames) const;
